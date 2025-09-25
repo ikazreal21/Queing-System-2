@@ -1,0 +1,293 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+/* ================== GLOBAL ================== */
+* {
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', sans-serif;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #f4f4f4;
+}
+
+/* ================== HERO & LOGIN ================== */
+.hero {
+    height: 100%;
+    width: 100%;
+    background-image: url(assets/campus.jpg);
+    background-position: center;
+    background-size: cover;
+    position: absolute;
+}
+
+.title {
+    margin-top: 4%;
+    margin-bottom: -7%;
+    text-align: center;
+    color: white;
+    font-size: 20px;
+}
+
+.title h1 {
+    justify-content: center;
+    align-items: center;
+    color: white;
+}
+
+.form-box {
+    width: 380px;
+    height: 480px;
+    position: relative;
+    margin-top: 10%;
+    margin-left: 40%;
+    background: #fff;
+    padding: 5px;
+    overflow: hidden;
+    border-radius: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.input-group {
+    top: 180px;
+    position: absolute;
+    width: 280px;
+    transition: .5s;
+}
+
+.input-group a {
+    color: #008c45;
+    font-size: 12px;
+    bottom: 68px;
+    margin-left: 54%;
+    position: absolute;
+    text-decoration: none;
+}
+
+.input-group a:hover {
+    text-decoration: underline;
+}
+
+.input-field {
+    width: 100%;
+    padding: 10px 0;
+    margin: 5px 0;
+    border: none;
+    border-bottom: 1px solid #999;
+    outline: none;
+    background: transparent;
+}
+
+.login-btn {
+    width: 85%;
+    padding: 10px 30px;
+    cursor: pointer;
+    display: block;
+    margin: 9% auto 0 auto;
+    background: linear-gradient(to right, #008c45, #48d18c);
+    border-radius: 30px;
+    border: 0;
+    color: white;
+}
+
+.back-btn {
+    width: 10%;
+    padding: 10px 30px;
+    cursor: pointer;
+    display: block;
+    margin: 1.3% 959px 0 auto;
+    background-color: white;
+    border-radius: 30px;
+    border: 0;
+    color: #008c45;
+    font-weight: 600;
+    margin-left: 850px;
+}
+
+img {
+    width: 45%;
+    margin: 7% auto 0 auto;
+    display: block;
+}
+
+#login {
+    left: 50px;
+    margin-top: 15%;
+}
+
+/* ================== TOP HEADER ================== */
+.top-header {
+    text-align: center;
+    margin: 0 auto;
+}
+
+.top-header h1 {
+    font-size: 2rem;
+}
+
+.top-header p {
+    font-size: 1rem;
+    color: #555;
+}
+
+/* ================== SUMMARY BOXES ================== */
+.landing-page {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1rem;
+}
+
+.service-box.summary {
+    background: #fff;
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    flex: 1 1 150px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.service-box.summary h3 {
+    margin: 0.5rem 0 0;
+    font-size: 1.5rem;
+}
+
+/* ================== TABLES ================== */
+.tables-container {
+    padding: 1rem;
+}
+
+table.approve-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.approve-table th,
+.approve-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.approve-table th {
+    background-color: #f0f0f0;
+}
+
+.approve-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+.viewDetails {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 0.4rem 0.7rem;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.viewDetails:hover {
+    background-color: #0056b3;
+}
+
+/* ================== MODAL ================== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 1.5rem;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 600px;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.modal-content h2 {
+    margin-top: 0;
+}
+
+.modal-content p {
+    margin: 0.5rem 0;
+}
+
+.modal-content button {
+    margin-top: 1rem;
+    margin-right: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#approveBtn {
+    background-color: #28a745;
+    color: white;
+}
+
+#approveBtn:hover {
+    background-color: #218838;
+}
+
+#declineBtn {
+    background-color: #dc3545;
+    color: white;
+}
+
+#declineBtn:hover {
+    background-color: #c82333;
+}
+
+#declineOptions {
+    margin-top: 1rem;
+    padding: 0.5rem;
+    background: #f8d7da;
+    border-radius: 5px;
+}
+
+#declineOptions label {
+    display: block;
+    margin-bottom: 0.3rem;
+}
+
+/* ================== CLOSE BUTTON ================== */
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+}
+
+/* ================== ATTACHMENT LINK ================== */
+#attachmentLink {
+    display: inline-block;
+    margin-top: 0.5rem;
+    color: #007bff;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+#attachmentLink:hover {
+    color: #0056b3;
+}

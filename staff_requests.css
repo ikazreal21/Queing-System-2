@@ -1,0 +1,1221 @@
+/* Existing CSS */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,200&display=swap');
+
+* {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --body-color: #f1f1f1;
+    --sidebar-color: #FFF;
+    --primary-color: #fff;
+    --secondary-color: #000;
+    --second-background: #181818;
+    --accent-color: #008c45;
+    --seond-accent-color: #008c45;
+
+    --tran-02: all 0.2s ease;
+    --tran-03: all 0.3s ease;
+    --tran-04: all 0.4s ease;
+    --tran-05: all 0.5s ease;
+}
+
+body {
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+    background: var(--body-color);
+    transition: var(--tran-05);
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 250px;
+    padding: 10px 14px;
+    background: var(--sidebar-color);
+    transition: var(--tran-05);
+    z-index: 100;
+}
+
+/* ===== Reusable CSS ===== */
+.sidebar .image {
+    min-width: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar li {
+    height: 50px;
+    margin-top: 10px;
+    list-style: none;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar li .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    font-size: 20px;
+}
+
+/* Styles for tab links */
+.tablinks {
+    display: flex;
+    align-items: center;
+    color: var(--text-color);
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 10px 1px;
+    font-size: 17px;
+    cursor: pointer;
+    transition: background var(--tran-02), color var(--tran-02);
+    width: 250px;
+    height: 50px;
+    border-radius: 8px;
+}
+
+.tablinks:hover {
+    background: var(--accent-color);
+    color: var(--primary-color);
+}
+
+.sidebar header {
+    position: relative;
+}
+
+.sidebar .image-text img {
+    width: 40px;
+    border-radius: 6px;
+}
+
+.sidebar header .image-text {
+    display: flex;
+    align-items: center;
+}
+
+header .image-text .header-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.header-text .name {
+    font-weight: 600;
+}
+
+.header-text .profession {
+    margin-top: -2px;
+}
+
+.sidebar .menu {
+    margin-top: -15px;
+}
+
+.sidebar li a {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    border-radius: 6px;
+    padding-left: 30px;
+}
+
+.sidebar li a:hover {
+    background: var(--accent-color);
+}
+
+.sidebar .menu-bar {
+    height: calc(100% - 50px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* ===== MAIN BODY CSS ===== */
+.home {
+    position: relative;
+    height: 100vh;
+    left: 250px;
+    width: calc(100% - 250px);
+    transition: var(--tran-05);
+    background: var(--body-color);
+}
+
+.home .text {
+    font-size: 30px;
+    font-weight: bold;
+    color: black;
+}
+
+/* Tab Content */
+.tab-content {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    max-width: 93%;
+}
+
+/* Style for form labels */
+.tab-content label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+/* Style for form inputs */
+.tab-content input[type="number"],
+.tab-content input[type="text"] {
+    width: calc(100% - 16px);
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 16px;
+}
+
+/* Style for the submit button */
+.tab-content input[type="submit"] {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.tab-content input[type="submit"]:hover {
+    background-color: #2232a8;
+}
+
+.tab-content h3 {
+    font-size: 30px;
+    font-weight: bold;
+    color: black;
+}
+
+hr {
+    border: none;
+    height: 1px;
+    background-color: #ccc;
+    margin: 20px 0;
+}
+
+.bottom-content .nav-link {
+    margin-top: -100px;
+}
+
+
+.section {
+    padding-block: 5em;
+    margin-left: 20%;
+}
+
+.service-box.summary{
+    display: flex;
+    flex-direction: column;
+    align-self: start;
+    width: 300px;
+    height: 260px;
+    background-color: var(--primary-color);
+    border: 2px solid var(--accent-color);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 17px;
+    margin-top: 2%;
+    /* margin-left: 10%; */
+}
+.service-box.summary h3{
+    font-size: 25px;
+    margin-top: 20px;
+}
+
+.landing-page{
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-left: 12%;
+    gap: 1em;
+}
+
+/* ===== HEADER ===== */
+
+.top-header {
+    text-align: center;
+    margin-bottom: 5em;
+}
+
+.top-header h1{
+    font-size: 2.5em;
+    font-weight: 600;
+    color: var(--secondary-color);
+    margin-bottom: 10px;
+    margin-right: 130px;
+}
+
+.top-header h1 span{
+    color: var(--accent-color);
+}
+
+.top-header span{
+    color: var(--secondary-color);
+    margin-bottom: -50%;
+}
+
+h3{
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--secondary-color);
+    margin-bottom: 15px;
+}
+
+/* ========== WAITING LIST ==========*/
+.section {
+    padding-block: 5em;
+}
+
+.service-container{
+    display: flex;
+}
+
+.service-container.monitor{
+    gap: 1em;
+    margin-left: -6%;
+}
+
+  .service-box.waitingList {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 50%;
+    height: 100%;
+    padding: 17px;
+    background-color: var(--primary-color);
+    border: 2px solid var(--accent-color);
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.service-box.monitor h3{
+    font-size: 40px;
+    margin-top: 20px;
+}
+
+.service-box.queue h3{
+    font-size: 40px;
+    margin-top: 20px;
+}
+  
+  .next {
+    background-color: #28a745; /* Green */
+  }
+  
+  .skip {
+    background-color: #ffc107; /* Yellow */
+    color: black;
+  }
+  
+  .process {
+    background-color: #007bff; /* Blue */
+  }
+
+   .doneProcess {
+    background-color: #14ad00; /* Blue */
+  }
+
+   .waitingView {
+    background-color: #ff8839; /* Blue */
+  }
+
+  .table-scroll {
+    width: 100%;
+    max-height: 290px; /* or any height you want */
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .approve-table {
+    width: 100%;
+    border-collapse: collapse;
+    overflow: hidden;
+  }
+  
+  .approve-table td {
+    padding: 12px;
+    border-bottom: 1px solid #000;
+    border-top: 1px solid #000;
+  }
+
+  .approve-table thead tr.approve-header-row th {
+    background-color: #008c45;
+    font-weight: bold;
+    font-size: 15px;
+    text-align: center;
+    padding: 16px;
+    color: white;
+    border-bottom: 2px solid #000;
+}
+
+  .action-btn {
+    margin: 3px;
+    padding: 3px 12px;
+    font-size: 14px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+
+  .approvenum-col {
+    text-align: center;
+    width: 10%;
+  }
+
+  .declinereason {
+    text-align: center;
+    width: 10%;
+  }
+
+
+  /* ========== NEXT IN LINE ==========*/
+
+.service-box.monitor{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+    align-self: start;
+    width: 300px;
+    height: 330px;
+    padding-left: 22px;
+    padding-bottom: 15px;
+    background-color: var(--primary-color);
+    border: 2px solid var(--accent-color);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 17px;
+}
+
+  /* ========== QUEUE IN LINE ==========*/
+
+  .service-box.queuemonitor {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 30%;
+    height: 100%;
+    padding: 17px;
+    background-color: var(--primary-color);
+    border: 2px solid var(--accent-color);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-right: 4%;
+}
+
+.table-scroll.approved {
+    width: 100%;
+    max-height: 290px; /* or any height you want */
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* ========== PROCESSING TIME ==========*/ 
+
+.custom-input {
+    width: 15%;
+}
+
+        /* ===== Table CSS ===== */
+        .table-scroll {
+            width: 90%;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 0 auto;
+        }
+
+        .request-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .request-table th, .request-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .request-table th {
+            background-color: #008c45; /* Accent color */
+            color: #fff;
+            position: sticky;
+            top: 0;
+        }
+
+        .request-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .request-table tr:hover {
+            background-color: #e0f7ff;
+        }
+
+        .top-header h1 {
+            font-size: 2.5em;
+            font-weight: 600;
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .top-header p {
+            text-align: center;
+            margin-bottom: 30px;
+            margin-right: 120px;
+        }
+    
+        /* ===== CONTAINER FOR BOTH BOXES ===== */
+.tables-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 2%;
+    margin-top: 2em;
+    margin-right: 60px;
+    margin-left: -60px;
+    flex-wrap: wrap; /* allows stacking on small screens */
+}
+
+/* ===== TODAY'S REQUESTS BOX ===== */
+.todays-requests-box {
+    flex: 1 1 70%; /* takes almost half the width */
+    min-height: 550px; /* taller */
+    background-color: var(--primary-color);
+    border: 2px solid var(--accent-color);
+    border-radius: 20px;
+    box-shadow: 0 6px 20px #008c45;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== ARCHIVES BOX ===== */
+.archives-box {
+    flex: 1 1 48%; /* takes almost half the width */
+    min-height: 550px; /* match height */
+    background-color: var(--primary-color);
+    border: 2px solid var(--accent-color);
+    border-radius: 20px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== BOX TITLES ===== */
+.todays-requests-box h3,
+.archives-box h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 20px;
+    color: var(--secondary-color);
+}
+
+/* ===== TABLES ===== */
+.todays-requests-box .approve-table,
+.archives-box .approve-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+}
+
+.todays-requests-box .table-scroll,
+.archives-box .table-scroll {
+    flex: 1;
+    max-height: 450px; /* use most of box height */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.todays-requests-box .approve-table th,
+.todays-requests-box .approve-table td,
+.archives-box .approve-table th,
+.archives-box .approve-table td {
+    padding: 15px;
+    text-align: center;
+    border-bottom: 1px solid #000;
+}
+
+.todays-requests-box .approve-table th,
+.archives-box .approve-table th {
+    background-color: var(--accent-color);
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 18px;
+    position: sticky;
+    top: 0;
+}
+
+.todays-requests-box .approve-table tr:nth-child(even),
+.archives-box .approve-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.todays-requests-box .approve-table tr:hover,
+.archives-box .approve-table tr:hover {
+    background-color: #e0f7ff;
+}
+
+/* ===== RESPONSIVE ===== */
+@media screen and (max-width: 900px) {
+    .todays-requests-box,
+    .archives-box {
+        flex: 1 1 100%;
+        margin-bottom: 2em;
+    }
+}
+/* ===== MAIN HEADER ===== */
+.top-header {
+    text-align: center;
+    margin-bottom: 40px;
+    position: relative;
+}
+
+.top-header h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--secondary-color);
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+}
+
+.top-header h1::after {
+    content: '';
+    display: block;
+    width: 80px;
+    height: 4px;
+    background-color: var(--accent-color);
+    margin: 12px auto 0 auto;
+    border-radius: 2px;
+}
+
+/* ===== TABLE CONTAINER ===== */
+.tables-container {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    margin-left: 20px;
+    margin-right: 20px;
+}
+
+/* ===== BOXES ===== */
+.todays-requests-box,
+.archives-box {
+    width: 100%;
+    min-height: 500px;
+    background-color: var(--primary-color);
+    border: 2px solid #ddd;
+    border-radius: 16px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.todays-requests-box:hover,
+.archives-box:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+}
+
+/* ===== BOX TITLES ===== */
+.todays-requests-box h3,
+.archives-box h3 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 25px;
+    color: var(--secondary-color);
+    position: relative;
+}
+
+#to-be-claimed-title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 25px;
+    color: var(--secondary-color);
+    position: relative;
+    padding-left: 6px;
+}
+
+.todays-requests-box h3::after,
+.archives-box h3::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 3px;
+    background-color: var(--accent-color);
+    margin: 12px auto 0 auto;
+    border-radius: 2px;
+}
+
+/* ===== TABLE ===== */
+.approve-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+}
+
+.table-scroll {
+    width: 100%;
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+.approve-table th,
+.approve-table td {
+    padding: 14px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+}
+
+.approve-table th {
+    background-color: #f7f7f7;
+    color: #333;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+}
+
+.approve-table tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.approve-table tr:hover {
+    background-color: #f2f2f2;
+}
+
+/* ===== ACTION BUTTONS ===== */
+.action-btn {
+    margin: 3px;
+    padding: 5px 12px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #333;
+    background-color: #f7f7f7;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.1s ease;
+}
+
+.action-btn:hover {
+    background-color: #eaeaea;
+    color: #000;
+    transform: translateY(-1px);
+}
+
+/* ===== RESPONSIVE ===== */
+@media screen and (max-width: 900px) {
+    .todays-requests-box,
+    .archives-box {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .top-header h1 {
+        font-size: 2.5rem;
+    }
+}
+/* APPROVE / DECLINE BUTTON COLORS */
+.approve-btn {
+    background-color: #28a745; /* green */
+    color: #fff;
+}
+
+.decline-btn {
+    background-color: #dc3545; /* red */
+    color: #fff;
+}
+
+.action-btn:hover {
+    opacity: 0.85;
+}
+.calendar-popup {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 10px 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    z-index: 999;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.calendar-popup .calendar-input {
+    padding: 5px;
+    font-size: 14px;
+}
+
+.calendar-popup .calendar-confirm {
+    padding: 5px 10px;
+    background: #4CAF50;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.calendar-popup .calendar-confirm:hover {
+    background: #45a049;
+}
+.modal-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(0,0,0,0.6);
+    color: #fff;
+    border: none;
+    font-size: 24px;
+    padding: 10px 15px;
+    cursor: pointer;
+    z-index: 1001;
+}
+
+.prev-btn { left: 10px; }
+.next-btn { right: 10px; }
+
+.modal-nav:hover {
+    background-color: rgba(0,0,0,0.8);
+}
+/* Lightbox overlay */
+#lightboxOverlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+#lightboxOverlay img {
+    max-width: 80%;
+    max-height: 70%;
+    margin-top: 10px;
+    border: 2px solid #fff;
+    border-radius: 8px;
+}
+
+#lightboxOverlay select {
+    margin-top: 10px;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+#closeLightbox {
+    color: #fff;
+    font-size: 2rem;
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    cursor: pointer;
+}
+
+/* Calendar popup */
+.calendar-popup {
+    position: absolute;
+    top: 40px;
+    left: 0;
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 10px;
+    z-index: 500;
+    display: flex;
+    gap: 5px;
+    border-radius: 5px;
+}
+
+.calendar-popup input {
+    padding: 3px 5px;
+}
+
+.calendar-popup button {
+    padding: 3px 7px;
+    cursor: pointer;
+}
+/* ================= LIGHTBOX ATTACHMENT VIEWER ================= */
+#lightboxOverlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+#closeLightbox {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 30px;
+    color: #fff;
+    cursor: pointer;
+}
+
+#attachmentSelector {
+    margin-bottom: 15px;
+    padding: 5px 10px;
+    font-size: 16px;
+    border-radius: 4px;
+}
+
+#attachmentContainer {
+    max-width: 90%;
+    max-height: 80%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#lightboxImage {
+    max-width: 100%;
+    max-height: 80vh;
+    border-radius: 4px;
+    display: block;
+}
+
+#lightboxPDF {
+    width: 80vw;
+    height: 80vh;
+    border: none;
+    border-radius: 4px;
+    display: block;
+}#completed-heading {
+    text-align: center;
+    margin-left: 660px;
+}
+/* Container for H3 and date picker inline */
+.completed-header {
+    display: flex;
+    justify-content: space-between; /* H3 left, date picker right */
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+/* Date picker styling */
+#completed-date-picker {
+    padding: 8px 12px;
+    font-size: 16px;
+    border: 1.5px solid #008c45;
+    border-radius: 6px;
+    background-color: #fff;
+    width: 180px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#completed-date-picker:hover {
+    border-color: #00632e;
+}
+
+#completed-date-picker:focus {
+    outline: none;
+    box-shadow: 0 0 5px rgba(0,140,69,0.5);
+    border-color: #008c45;
+}
+/* ===== CUSTOM BUTTON COLORS ===== */
+.finish-btn {
+    background-color: #008C45; /* green */
+    color: #fff;
+}
+
+.finish-btn:hover {
+    background-color: #006c35; /* darker green on hover */
+}
+
+.pending-btn {
+    background-color: orange;
+    color: #fff;
+}
+
+.pending-btn:hover {
+    background-color: #cc7000; /* darker orange on hover */
+}
+/* ========== WALK-IN MODAL STYLE ========== */
+
+/* Overlay */
+#walkin-modal-unique {
+    display: none; /* hidden by default */
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    overflow-y: auto;
+}
+
+/* Modal content box */
+.modal-content-unique {
+    background-color: var(--primary-color);
+    margin: 5% auto;
+    padding: 30px 40px;
+    border-radius: 20px;
+    width: 650px;
+    max-width: 90%;
+    box-shadow: 0 4px 20px rgba(0, 140, 69, 0.4);
+    position: relative;
+    animation: slide-down 0.4s ease;
+}
+
+/* Slide-down animation */
+@keyframes slide-down {
+    0% { transform: translateY(-50px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+}
+
+/* Close button */
+.close-unique {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--secondary-color);
+    transition: 0.3s;
+}
+
+.close-unique:hover {
+    color: var(--accent-color);
+}
+
+/* Modal Header */
+.modal-content-unique h3 {
+    text-align: center;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--secondary-color);
+    margin-bottom: 25px;
+}
+
+/* Info columns (Two-column layout) */
+.info-columns-unique {
+    display: flex;
+    gap: 25px;
+    margin-bottom: 25px;
+}
+
+.info-left-unique,
+.info-right-unique {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Input fields and select boxes */
+.info-left-unique input[type="text"],
+.info-left-unique select,
+.info-right-unique input[type="text"],
+.info-right-unique select,
+.notes-section-unique textarea,
+.upload-section-unique input[type="file"] {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid var(--accent-color);
+    border-radius: 10px;
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
+    font-size: 14px;
+    outline: none;
+    transition: 0.3s ease;
+}
+
+.info-left-unique input:focus,
+.info-left-unique select:focus,
+.info-right-unique input:focus,
+.info-right-unique select:focus,
+.notes-section-unique textarea:focus,
+.upload-section-unique input[type="file"]:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 10px var(--accent-color);
+}
+
+/* Labels */
+.info-left-unique label,
+.info-right-unique label,
+.notes-section-unique label,
+.upload-section-unique label {
+    font-weight: 500;
+    color: var(--secondary-color);
+    margin-bottom: 5px;
+}
+
+/* Document checkboxes */
+.document-columns-unique {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.document-left-unique,
+.document-right-unique {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.doc-checkbox-unique {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    border: 2px solid var(--accent-color);
+    border-radius: 10px;
+    background: var(--primary-color);
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.doc-checkbox-unique:hover {
+    background: var(--accent-color);
+    color: var(--primary-color);
+}
+
+.doc-checkbox-unique input[type="checkbox"] {
+    accent-color: var(--accent-color);
+    transform: scale(1.2);
+    cursor: pointer;
+}
+
+/* Notes section */
+.notes-section-unique textarea {
+    height: 120px;
+    resize: vertical;
+    padding: 12px 15px;
+}
+
+/* Upload section */
+.upload-section-unique input[type="file"] {
+    cursor: pointer;
+}
+
+/* Submit button */
+#submit-form-unique {
+    display: block;
+    margin: 25px auto 0;
+    padding: 12px 25px;
+    border-radius: 12px;
+    font-weight: 500;
+    font-size: 16px;
+    color: var(--secondary-color);
+    background: transparent;
+    border: 2px solid var(--accent-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#submit-form-unique:hover {
+    background: var(--accent-color);
+    color: var(--primary-color);
+    box-shadow: 0 0 1.5em var(--accent-color);
+    transform: scale(1.05);
+}
+
+/* Responsive adjustments */
+@media only screen and (max-width: 700px) {
+    .info-columns-unique {
+        flex-direction: column;
+    }
+    .document-columns-unique {
+        flex-direction: column;
+    }
+}
+/* Modal overlay */
+.modal-unique {
+    display: none; /* hidden by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    z-index: 9999;
+    overflow: auto;
+}
+
+/* Modal content */
+.modal-content-unique {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 10px;
+    width: 600px;
+    max-width: 90%;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+/* Close button */
+.close-unique {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Confirm/cancel buttons */
+#walkin-confirm-submit,
+#walkin-confirm-cancel {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+#walkin-confirm-submit { background-color: #4CAF50; color: #fff; }
+#walkin-confirm-cancel { background-color: #f44336; color: #fff; }

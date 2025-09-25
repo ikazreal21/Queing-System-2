@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,200&display=swap');
+*{
+    font-family: 'Poppins', sans-serif;
+}
+body {
+    background-color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.container {
+    background-color: #ffffff;
+    width: 50%;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+    overflow-y: auto;
+    max-height: 80vh;
+}
+
+h2 {
+    color: #28a745;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.checkbox-column label {
+    color: #000000;
+}
+
+.back-btn {
+    display: inline-block;
+    background-color: #ffffff;
+    color: #28a745;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: bold;
+    transition: background-color 0.3s, color 0.3s;
+    margin-top: 20px;
+}
+
+.back-btn:hover {
+    background-color: #28a745;
+    color: #ffffff;
+}
+
+.checkbox-columns {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 20px;
+}
+
+.checkbox-column {
+    flex: 1;
+    color: #ffffff;
+}
+
+.checkbox-column input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+.submit-decline-btn {
+    background-color: #28a745;
+    color: #ffffff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.submit-decline-btn:hover {
+    background-color: #ffffff;
+    color: #28a745;
+}

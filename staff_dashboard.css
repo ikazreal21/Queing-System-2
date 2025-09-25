@@ -1,0 +1,749 @@
+/* Existing CSS */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,200&display=swap');
+
+* {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --body-color: #f1f1f1;
+    --sidebar-color: #FFF;
+    --primary-color: #fff;
+    --secondary-color: #000;
+    --second-background: #181818;
+    --accent-color: #008c45;
+    --seond-accent-color: #008c45;
+
+    --tran-02: all 0.2s ease;
+    --tran-03: all 0.3s ease;
+    --tran-04: all 0.4s ease;
+    --tran-05: all 0.5s ease;
+}
+
+body {
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+    background: var(--body-color);
+    transition: var(--tran-05);
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 250px;
+    padding: 10px 14px;
+    background: var(--sidebar-color);
+    transition: var(--tran-05);
+    z-index: 100;
+}
+
+/* ===== Reusable CSS ===== */
+.sidebar .image {
+    min-width: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar li {
+    height: 50px;
+    margin-top: 10px;
+    list-style: none;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar li .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    font-size: 20px;
+}
+
+/* Styles for tab links */
+.tablinks {
+    display: flex;
+    align-items: center;
+    color: var(--text-color);
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 10px 1px;
+    font-size: 17px;
+    cursor: pointer;
+    transition: background var(--tran-02), color var(--tran-02);
+    width: 250px;
+    height: 50px;
+    border-radius: 8px;
+}
+
+.tablinks:hover {
+    background: var(--accent-color);
+    color: var(--primary-color);
+}
+
+.sidebar header {
+    position: relative;
+}
+
+.sidebar .image-text img {
+    width: 40px;
+    border-radius: 6px;
+}
+
+.sidebar header .image-text {
+    display: flex;
+    align-items: center;
+}
+
+header .image-text .header-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.header-text .name {
+    font-weight: 600;
+}
+
+.header-text .profession {
+    margin-top: -2px;
+}
+
+.sidebar .menu {
+    margin-top: -15px;
+}
+
+.sidebar li a {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    border-radius: 6px;
+    padding-left: 30px;
+}
+
+.sidebar li a:hover {
+    background: var(--accent-color);
+}
+
+.sidebar .menu-bar {
+    height: calc(100% - 50px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* ===== MAIN BODY CSS ===== */
+.home {
+    position: relative;
+    height: 100vh;
+    left: 250px;
+    width: calc(100% - 250px);
+    transition: var(--tran-05);
+    background: var(--body-color);
+}
+
+.home .text {
+    font-size: 30px;
+    font-weight: bold;
+    color: black;
+}
+
+/* Tab Content */
+.tab-content {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    max-width: 93%;
+}
+
+/* Style for form labels */
+.tab-content label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+/* Style for form inputs */
+.tab-content input[type="number"],
+.tab-content input[type="text"] {
+    width: calc(100% - 16px);
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 16px;
+}
+
+/* Style for the submit button */
+.tab-content input[type="submit"] {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.tab-content input[type="submit"]:hover {
+    background-color: #2232a8;
+}
+
+.tab-content h3 {
+    font-size: 30px;
+    font-weight: bold;
+    color: black;
+}
+
+hr {
+    border: none;
+    height: 1px;
+    background-color: #ccc;
+    margin: 20px 0;
+}
+
+.bottom-content .nav-link {
+    margin-top: -100px;
+}
+
+
+.section {
+    padding-block: 5em;
+    margin-left: 20%;
+}
+
+.service-box.summary{
+    display: flex;
+    flex-direction: column;
+    align-self: start;
+    width: 300px;
+    height: 260px;
+    background-color: var(--primary-color);
+    border: 2px solid var(--accent-color);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 17px;
+    margin-top: 2%;
+    /* margin-left: 10%; */
+}
+.service-box.summary h3{
+    font-size: 30px;
+    margin-top: 20px;
+}
+
+.landing-page{
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-left: 12%;
+    gap: 1em;
+}
+
+/* ===== HEADER ===== */
+
+.top-header {
+    text-align: center;
+    margin-bottom: 5em;
+}
+
+.top-header h1{
+    font-size: 2.5em;
+    font-weight: 600;
+    color: var(--secondary-color);
+    margin-bottom: 10px;
+}
+
+.top-header h1 span{
+    color: var(--accent-color);
+}
+
+.top-header span{
+    color: var(--secondary-color);
+    margin-bottom: -50%;
+}
+
+h3{
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--secondary-color);
+    margin-bottom: 15px;
+}
+
+/* ========== WAITING LIST ==========*/
+.section {
+    padding-block: 5em;
+}
+
+.service-container{
+    display: flex;
+}
+
+.service-container.monitor{
+    gap: 1em;
+    margin-left: -6%;
+}
+
+  .service-box.waitingList {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 50%;
+    height: 100%;
+    padding: 17px;
+    background-color: var(--primary-color);
+    border: 2px solid var(--accent-color);
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.service-box.monitor h3{
+    font-size: 40px;
+    margin-top: 20px;
+}
+
+.service-box.queue h3{
+    font-size: 40px;
+    margin-top: 20px;
+}
+  
+  .next {
+    background-color: #28a745; /* Green */
+  }
+  
+  .skip {
+    background-color: #ffc107; /* Yellow */
+    color: black;
+  }
+  
+  .process {
+    background-color: #007bff; /* Blue */
+  }
+
+   .doneProcess {
+    background-color: #14ad00; /* Blue */
+  }
+
+   .waitingView {
+    background-color: #ff8839; /* Blue */
+  }
+
+  .table-scroll {
+    width: 100%;
+    max-height: 290px; /* or any height you want */
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .approve-table {
+    width: 100%;
+    border-collapse: collapse;
+    overflow: hidden;
+  }
+  
+  .approve-table td {
+    padding: 12px;
+    border-bottom: 1px solid #000;
+    border-top: 1px solid #000;
+  }
+
+  .approve-table thead tr.approve-header-row th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+    font-size: 22px;
+    text-align: center;
+    padding: 16px;
+    color: #333;
+    border-bottom: 2px solid #000;
+}
+
+  .action-btn {
+    margin: 3px;
+    padding: 3px 12px;
+    font-size: 14px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+
+  .approvenum-col {
+    text-align: center;
+    width: 10%;
+  }
+
+  .declinereason {
+    text-align: center;
+    width: 10%;
+  }
+
+
+  /* ========== NEXT IN LINE ==========*/
+
+.service-box.monitor{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+    align-self: start;
+    width: 300px;
+    height: 330px;
+    padding-left: 22px;
+    padding-bottom: 15px;
+    background-color: var(--primary-color);
+    border: 2px solid var(--accent-color);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 17px;
+}
+
+  /* ========== QUEUE IN LINE ==========*/
+
+  .service-box.queuemonitor {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 30%;
+    height: 100%;
+    padding: 17px;
+    background-color: var(--primary-color);
+    border: 2px solid var(--accent-color);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-right: 4%;
+}
+
+.table-scroll.approved {
+    width: 100%;
+    max-height: 290px; /* or any height you want */
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* ========== PROCESSING TIME ==========*/ 
+
+.custom-input {
+    width: 15%;
+}
+
+/* ===== UNIFIED TABLE BOXES ===== */
+.tables-container {
+    display: flex;
+    flex-direction: column; /* Stack vertically */
+    gap: 30px; /* Space between Today & Archive */
+    margin-top: 20px;
+}
+
+/* Table box styling for both Today & Archive */
+.service-box.todays-requests-box,
+.table-box.archive-box {
+    width: 100%;
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Table heading */
+.service-box h3,
+.table-box h3 {
+    font-size: 26px;
+    margin-bottom: 15px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Table scroll wrapper */
+.table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 450px; /* Scroll if table is too tall */
+}
+
+/* Tables */
+.approve-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px; /* Prevent compact columns */
+}
+
+.approve-table th,
+.approve-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    font-size: 14px;
+    color: #333;
+}
+
+.approve-table th {
+    background-color: #f7f7f7;
+    font-weight: 600;
+    color: #555;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.approve-table tr:hover {
+    background-color: #f0f8ff;
+}
+
+/* Action buttons */
+.viewDetails {
+    background-color: #008c45;
+    color: #fff;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.3s;
+}
+
+.viewDetails:hover {
+    background-color: #00692c;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 1024px) {
+    .service-box.todays-requests-box,
+    .table-box.archive-box {
+        width: 100%; /* Full width on smaller screens */
+    }
+}
+
+/* Optional: nice scroll styling */
+.table-scroll::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.table-scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 4px;
+}
+
+.table-scroll::-webkit-scrollbar-track {
+    background-color: rgba(0,0,0,0.05);
+    border-radius: 4px;
+}
+/* Center the table sections without shrinking them */
+.tables-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* center horizontally */
+    gap: 2em; /* space between tables */
+    width: 100%;
+}
+
+/* Individual table boxes */
+.service-box.todays-requests-box,
+.table-box.archive-box {
+    width: 95%; /* slightly smaller than full width to avoid touching scrollbar */
+    margin: 0 auto; /* center horizontally */
+    padding: 20px;
+    background-color: var(--primary-color);
+    border: 2px solid var(--accent-color);
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+/* Table scrolling */
+.table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 400px;
+}
+
+/* Table styling */
+.approve-table,
+.archive-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.approve-table th,
+.approve-table td,
+.archive-table th,
+.archive-table td {
+    padding: 12px 15px;
+    text-align: center;
+    border: 1px solid #ddd;
+}
+
+.approve-table th,
+.archive-table th {
+    background-color: #f2f2f2;
+    font-weight: 600;
+    color: #333;
+}
+
+.approve-table tr:nth-child(even),
+.archive-table tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.approve-table tr:hover,
+.archive-table tr:hover {
+    background-color: #f1f1f1;
+}
+/* ===== MODAL STYLING ===== */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    background-color: rgba(0,0,0,0.5); /* Dark overlay */
+    transition: all 0.3s ease;
+    padding: 40px 0;
+}
+
+/* Modal content box */
+.modal-content {
+    background-color: #fff;
+    margin: 50px auto;
+    border-radius: 12px;
+    padding: 25px 30px;
+    width: 90%;
+    max-width: 700px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    animation: slideIn 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Close button */
+.modal .close {
+    align-self: flex-end;
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.modal .close:hover {
+    color: #008c45; /* Accent color */
+}
+
+/* Modal header */
+.modal-content h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 26px;
+    color: #008c45;
+}
+
+/* Sections inside modal */
+.modal-section {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-label {
+    flex: 0 0 150px;
+    font-weight: 600;
+    color: #555;
+}
+
+.modal-value {
+    flex: 1;
+    color: #333;
+    word-break: break-word;
+}
+
+/* Attachments links */
+#attachmentContainer a {
+    display: block;
+    margin-top: 4px;
+    padding: 6px 10px;
+    background-color: #008c45;
+    color: white;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+#attachmentContainer a:hover {
+    background-color: #00692c;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 600px) {
+    .modal-content {
+        padding: 20px;
+        width: 95%;
+    }
+
+    .modal-label {
+        flex: 0 0 120px;
+        font-size: 14px;
+    }
+
+    .modal-value {
+        font-size: 14px;
+    }
+}
+
+/* Simple slide-in animation */
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+/* Match generate report button to View button */
+#generateReportForm button {
+    background-color: #008c45;
+    color: #fff;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.3s;
+}
+
+#generateReportForm button:hover {
+    background-color: #00692c;
+}
