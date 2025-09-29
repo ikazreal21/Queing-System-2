@@ -48,7 +48,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $attachmentStr = !empty($attachments) ? implode(", ", $attachments) : null;
 
         // 🔹 Calculate processing time + dates
-        $processing_time = null;
+        $processing_days = null;
         $processing_start = null;
         $processing_deadline = null;
         $scheduled_date = null;
@@ -61,7 +61,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $max_days = (int)$stmtDocs->fetchColumn();
 
             if ($max_days > 0) {
-                $processing_time = $max_days;
+                $processing_days = $max_days;
                 $stmtNow = $pdo->query("SELECT NOW()");
                 $processing_start = $stmtNow->fetchColumn();
 
@@ -87,7 +87,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
              processing_time, processing_start, processing_deadline, scheduled_date, queueing_num, serving_position, created_at, updated_at) 
             VALUES 
             (:first_name, :last_name, :student_number, :section, :department, :last_school_year, :last_semester, :documents, :notes, :attachment, :status,
-             :processing_time, :processing_start, :processing_deadline, :scheduled_date, :queueing_num, :serving_position, NOW(), NOW())";
+             :processing_days, :processing_start, :processing_deadline, :scheduled_date, :queueing_num, :serving_position, NOW(), NOW())";
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
@@ -102,7 +102,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             ':notes'              => $notes,
             ':attachment'         => $attachmentStr,
             ':status'             => $status,
-            ':processing_time'    => $processing_time,
+            ':processing_days'    => $processing_days,
             ':processing_start'   => $processing_start,
             ':processing_deadline'=> $processing_deadline,
             ':scheduled_date'     => $scheduled_date,
