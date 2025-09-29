@@ -109,7 +109,7 @@ $completedCount = $stmt->fetchColumn();
             </ul>
         </div>
         <div class="bottom-content">
-            <li class="nav-link"><button class="tablinks"><a href="logout_staff.php" class="tablinks">Logout</a></button></li>
+            <li class="nav-link"><button class="tablinks"><a href="logout_user.php" class="tablinks">Logout</a></button></li>
         </div>
     </div>
 </nav>

@@ -72,139 +72,115 @@
     $my_requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
-
-    // ✅ Fetch latest active request for queue display
-    $queue_num = null;
-    $position_in_line = null;
-    $estimated_time = null;
-
-    $stmt = $pdo->prepare("
-        SELECT id, queueing_num, status, created_at
-        FROM requests
-        WHERE first_name = :first_name 
-        AND last_name = :last_name
-        AND status IN ('Pending','Processing','To Be Claimed','Serving')
-        ORDER BY created_at DESC
-        LIMIT 1
-    ");
-    $stmt->execute([
-        ':first_name' => $first_name,
-        ':last_name'  => $last_name
-    ]);
-    $request = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($request) {
-        $queue_num = $request['queueing_num'];
-
-        // Find how many are ahead in line
-        $stmt2 = $pdo->prepare("
-            SELECT COUNT(*) 
-            FROM requests 
-            WHERE queueing_num < :queue_num
-            AND status IN ('Pending','Processing','Serving')
-        ");
-        $stmt2->execute([':queue_num' => $queue_num]);
-        $position_in_line = $stmt2->fetchColumn();
-
-        // Example: assume 5 minutes per request
-        $estimated_minutes = $position_in_line * 5;
-        $estimated_time = gmdate("H:i:s", $estimated_minutes * 60);
-    }
-
-    // === queue / serving info for latest active request ===
-    $queue_num = null;
-    $serving_position = null;
-    $position_in_line = null;
-    $estimated_time = null;
-
-    $stmt = $pdo->prepare("
-        SELECT id, queueing_num, serving_position, status, processing_start, processing_end, created_at
-        FROM requests
-        WHERE first_name = :first_name
-        AND last_name = :last_name
-        AND status IN ('Pending','Processing','To Be Claimed','Serving')
-        ORDER BY created_at DESC
-        LIMIT 1
-    ");
-    $stmt->execute([
-        ':first_name' => $first_name,
-        ':last_name'  => $last_name
-    ]);
-    $request = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($request && !empty($request['queueing_num'])) {
-        $queue_num = (int)$request['queueing_num'];
-
-        // Prefer serving_position if stored in DB
-        if (!empty($request['serving_position'])) {
-            $serving_position = (int)$request['serving_position'];
-            $position_in_line = max(0, $serving_position - 1);
-        } else {
-            // Calculate based on queue number if serving_position is missing
-            $stmt2 = $pdo->prepare("
-                SELECT COUNT(*) 
-                FROM requests 
-                WHERE queueing_num < :queue_num
-                AND status IN ('Pending','Processing','Serving')
-            ");
-            $stmt2->execute([':queue_num' => $queue_num]);
-            $ahead = (int)$stmt2->fetchColumn();
-
-            $position_in_line = $ahead;
-            $serving_position = $ahead + 1;
-        }
-
-        // Example: estimate 5 minutes per request
-        $estimated_minutes = $position_in_line * 5;
-        $estimated_time = gmdate("H:i:s", $estimated_minutes * 60);
-    } else {
-        // No active request → reset to null
-        $queue_num = null;
-        $serving_position = null;
-        $position_in_line = null;
-        $estimated_time = null;
-    }
-
-
-    // Fetch the currently serving request (based on serving_position, not id)
-    $stmt = $pdo->prepare("
-        SELECT queueing_num, serving_position, CONCAT(first_name, ' ', last_name) AS name
-        FROM requests
-        WHERE status = 'Serving'
-        AND queueing_num IS NOT NULL
-        ORDER BY serving_position ASC, queueing_num ASC
-        LIMIT 1
-    ");
-    $stmt->execute();
-    $currently_serving = $stmt->fetch(PDO::FETCH_ASSOC);
-
-
-
-    // 👇 Add this helper function anywhere after session_start()
-    function ordinal($number) {
-        if (!is_numeric($number)) return $number;
-        $ends = ['th','st','nd','rd','th','th','th','th','th','th'];
-        if ((($number % 100) >= 11) && (($number % 100) <= 13))
-            return $number. 'th';
-        else
-            return $number. $ends[$number % 10];
-    }
-// Fetch the currently serving request
+// --- Fetch student's latest active request (by name) ---
 $stmt = $pdo->prepare("
-    SELECT 
-        r.queueing_num, 
-        r.serving_position, 
-        CONCAT(r.first_name, ' ', r.last_name) AS student_name,
-        u.counter_no,
-        CONCAT(u.first_name, ' ', u.last_name) AS staff_name
-    FROM requests r
-    LEFT JOIN users u ON r.served_by = u.id
-    WHERE r.status = 'Serving'
-    ORDER BY r.serving_position ASC, r.queueing_num ASC
+    SELECT id, department, queueing_num, serving_position, status, created_at
+    FROM requests
+    WHERE first_name = :first_name 
+      AND last_name  = :last_name
+      AND status IN ('Pending','In Queue Now','Processing','To Be Claimed','Serving')
+    ORDER BY created_at DESC
     LIMIT 1
 ");
-$stmt->execute();
-$currently_serving = $stmt->fetch(PDO::FETCH_ASSOC);
+$stmt->execute([
+    ':first_name' => $first_name,
+    ':last_name'  => $last_name
+]);
+$request = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// initialize
+$queue_num = null;
+$request_status = null;
+$serving_position = null;
+$position_in_line = null;
+$estimated_time = null;
+$student_department = null;
+$currently_serving = null;
+$is_your_turn = false;      // <-- final guard: true only if the currently serving row matches you
+$display_status = null;     // <-- status used by the UI
+
+if ($request && !empty($request['queueing_num'])) {
+    $queue_num = (int)$request['queueing_num'];
+    $request_status = $request['status'];
+    $student_department = $request['department'];
+    $display_status = $request_status; // default
+
+    // --- Get the department's currently serving row (include r.id so we can compare) ---
+    $stmt3 = $pdo->prepare("
+        SELECT 
+            r.id,
+            r.queueing_num, 
+            r.serving_position, 
+            CONCAT(r.first_name, ' ', r.last_name) AS student_name,
+            u.counter_no,
+            CONCAT(u.first_name, ' ', u.last_name) AS staff_name
+        FROM requests r
+        LEFT JOIN users u ON r.served_by = u.id
+        WHERE r.status = 'Serving'
+          AND r.department = :dept
+        ORDER BY r.serving_position ASC, r.queueing_num ASC
+        LIMIT 1
+    ");
+    $stmt3->execute([':dept' => $student_department]);
+    $currently_serving = $stmt3->fetch(PDO::FETCH_ASSOC);
+
+    // --- Decide if it's actually YOUR turn ---
+    if ($request_status === 'Serving' && !empty($currently_serving)) {
+        // match by queueing number OR by request id (both robust)
+        if (((int)$currently_serving['queueing_num'] === $queue_num) ||
+            (isset($request['id']) && (int)$currently_serving['id'] === (int)$request['id'])) {
+            $is_your_turn = true;
+            $display_status = 'Serving';
+        } else {
+            // someone else is marked serving — do NOT tell this student to proceed
+            $is_your_turn = false;
+            // fallback: treat this student's status for display as "In Queue Now" (or keep DB value but avoid 'Serving' UI)
+            $display_status = 'In Queue Now';
+        }
+    }
+
+    // --- If not directly being served, compute position/estimate only for real queued statuses ---
+    if ($is_your_turn) {
+        $position_in_line = 0;
+        $serving_position = (int)($currently_serving['serving_position'] ?? 1);
+        $estimated_time = "00:00:00";
+    } else {
+        if ($request_status === 'Pending') {
+            // not in queue yet
+            $position_in_line = null;
+            $serving_position = null;
+            $estimated_time = null;
+            $display_status = 'Pending';
+        } else {
+            // calculate how many are ahead (exclude Pending and exclude Serving)
+            if (!empty($request['serving_position'])) {
+                $serving_position = (int)$request['serving_position'];
+                $position_in_line = max(0, $serving_position - 1);
+            } else {
+                $stmt2 = $pdo->prepare("
+                    SELECT COUNT(*) 
+                    FROM requests 
+                    WHERE department = :dept
+                      AND queueing_num < :queue_num
+                      AND status IN ('In Queue Now','Processing')
+                ");
+                $stmt2->execute([
+                    ':dept' => $student_department,
+                    ':queue_num' => $queue_num
+                ]);
+                $ahead = (int)$stmt2->fetchColumn();
+                $position_in_line = $ahead;
+                $serving_position = $ahead + 1;
+            }
+
+            $estimated_minutes = $position_in_line * 5; // change per your SLA
+            $estimated_time    = gmdate("H:i:s", $estimated_minutes * 60);
+            // display_status already set to $request_status (In Queue Now / Processing / To Be Claimed)
+        }
+    }
+} else {
+    $display_status = 'None';
+}
 
 ?>
 
@@ -661,58 +637,77 @@ setInterval(updateRegistrarStatus, 60000);
 
 
 
-<!---------- QUEUE NUMBER ----------> 
+<!---------- QUEUE NUMBER ---------->
 <section class="section" id="services">
     <div class="top-header">
         <h1>Your Queue Number</h1>
     </div>
+
     <div class="service-container">
         <!-- Your queue info -->
         <div class="service-box">
-            <?php if ($queue_num === null || $serving_position === null): ?>
-                <label>
-                    You are <b>not in line</b>.
-                </label>
-                <h3>N/A</h3>
-            <?php else: ?>
-                <label>
-                    You are <b><?php echo ordinal($serving_position); ?></b> in line.
-                </label>
-                <h3><?php echo $queue_num; ?></h3>
+            <?php
+            // Defensive: ensure variables exist to avoid notices
+            $queue_num = isset($queue_num) ? $queue_num : null;
+            $request_status = isset($request_status) ? $request_status : null;
+            ?>
 
-                <?php if ($serving_position == 1): ?>
-                    <p style="color: green; font-weight: bold; margin-top: 10px;">
-                        🎉 It's your turn! Please proceed to the counter.
-                    </p>
-                <?php elseif ($serving_position <= 3 && $serving_position > 1): ?>
-                    <p style="color: orange; font-weight: bold; margin-top: 10px;">
-                        ⏳ Almost your turn! Get ready.
-                    </p>
-                <?php endif; ?>
-            <?php endif; ?>
+            <?php if ($queue_num === null || $display_status === 'Pending'): ?>
+    <label>You are <b>not yet in the queue</b>.</label>
+    <h3>N/A</h3>
+    <p style="color: gray; font-weight: bold; margin-top: 10px;">📌 Your request is still pending approval.</p>
+
+<?php elseif ($is_your_turn): ?>
+    <label>It’s your <b>turn now!</b></label>
+    <h3><?php echo htmlspecialchars((string)$queue_num); ?></h3>
+    <p style="color: green; font-weight: bold; margin-top: 10px;">🎉 Please proceed to the counter.</p>
+
+<?php elseif ($display_status === 'In Queue Now' || $display_status === 'Processing' || $display_status === 'To Be Claimed'): ?>
+    <label>You are currently <b>in the queue</b> (waiting).</label>
+    <h3><?php echo htmlspecialchars((string)$queue_num); ?></h3>
+    <p style="color: orange; font-weight: bold; margin-top: 10px;">
+        ⏳ Position in line: <?php echo ($position_in_line !== null) ? (int)$position_in_line : 'N/A'; ?> — Est. wait: <?php echo ($estimated_time !== null) ? $estimated_time : 'N/A'; ?>
+    </p>
+
+<?php elseif ($display_status === 'To Be Claimed'): ?>
+    <label>✅ Your request is ready <b>to be claimed</b>.</label>
+    <h3><?php echo htmlspecialchars((string)$queue_num); ?></h3>
+    <p style="color: blue; font-weight: bold; margin-top: 10px;">📍 Please go to the office to claim your document.</p>
+
+<?php elseif ($display_status === 'Completed'): ?>
+    <label>🎉 Your request has been <b>completed</b>.</label>
+    <h3>N/A</h3>
+
+<?php elseif ($display_status === 'Declined'): ?>
+    <label>❌ Your request has been <b>declined</b>.</label>
+    <h3>N/A</h3>
+
+<?php else: ?>
+    <label>You are <b>not in line</b>.</label>
+    <h3>N/A</h3>
+<?php endif; ?>
+
         </div>
 
         <!-- Currently serving info -->
         <div class="service-box">
-    <?php if (!empty($currently_serving)): ?>
-        <label><b>Now Serving:</b></label>
-        <h3><?php echo $currently_serving['queueing_num']; ?></h3>
-        <p>
-            Line: <?php echo ordinal($currently_serving['serving_position']); ?><br>
-            Name: <?php echo $currently_serving['student_name']; ?><br>
-            Counter: <b><?php echo $currently_serving['counter_no'] ?? 'N/A'; ?></b><br>
-            Staff: <b><?php echo $currently_serving['staff_name'] ?? 'Unknown'; ?></b>
-        </p>
-    <?php else: ?>
-        <label><b>Now Serving:</b></label>
-        <h3>N/A</h3>
-        <p>No one is being served right now.</p>
-    <?php endif; ?>
-</div>
-
-
+            <?php if (!empty($currently_serving) && is_array($currently_serving)): ?>
+                <label><b>Now Serving:</b></label>
+                <h3><?php echo htmlspecialchars((string)($currently_serving['queueing_num'] ?? 'N/A')); ?></h3>
+                <p>
+                    Name: <?php echo htmlspecialchars($currently_serving['student_name'] ?? 'N/A'); ?><br>
+                    Counter: <b><?php echo htmlspecialchars((string)($currently_serving['counter_no'] ?? 'N/A')); ?></b><br>
+                    Staff: <b><?php echo htmlspecialchars($currently_serving['staff_name'] ?? 'Unknown'); ?></b>
+                </p>
+            <?php else: ?>
+                <label><b>Now Serving:</b></label>
+                <h3>N/A</h3>
+                <p>No one is being served right now.</p>
+            <?php endif; ?>
+        </div>
     </div>
 </section>
+
 
 
 

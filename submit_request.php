@@ -17,7 +17,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         // Handle multiple file uploads
         $attachments = [];
-        $status = "Declined"; // default
+        $status = "Declined"; // default if no attachment
 
         if (!empty($_FILES['attachment']['name'][0])) {
             $targetDir = "uploads/";
@@ -72,13 +72,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         }
 
+        // 🔹 Calculate queue number per department
+        $stmtQueue = $pdo->prepare("SELECT MAX(queueing_num) FROM requests WHERE department = ?");
+        $stmtQueue->execute([$department]);
+        $maxQueue = $stmtQueue->fetchColumn();
+        $queueing_num = $maxQueue ? $maxQueue + 1 : 1;
+
+        // 🔹 Optional: serving_position same as queueing_num initially
+        $serving_position = $queueing_num;
+
         // Insert into DB
         $sql = "INSERT INTO requests 
             (first_name, last_name, student_number, section, department, last_school_year, last_semester, documents, notes, attachment, status,
-             processing_time, processing_start, processing_deadline, scheduled_date, created_at, updated_at) 
+             processing_time, processing_start, processing_deadline, scheduled_date, queueing_num, serving_position, created_at, updated_at) 
             VALUES 
             (:first_name, :last_name, :student_number, :section, :department, :last_school_year, :last_semester, :documents, :notes, :attachment, :status,
-             :processing_time, :processing_start, :processing_deadline, :scheduled_date, NOW(), NOW())";
+             :processing_time, :processing_start, :processing_deadline, :scheduled_date, :queueing_num, :serving_position, NOW(), NOW())";
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
@@ -96,7 +105,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             ':processing_time'    => $processing_time,
             ':processing_start'   => $processing_start,
             ':processing_deadline'=> $processing_deadline,
-            ':scheduled_date'     => $scheduled_date
+            ':scheduled_date'     => $scheduled_date,
+            ':queueing_num'       => $queueing_num,
+            ':serving_position'   => $serving_position
         ]);
 
         // Feedback
@@ -119,3 +130,4 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     header("Location: user_dashboard.php");
     exit();
 }
+?>

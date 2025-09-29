@@ -167,12 +167,27 @@ function setupClaimDateInputs() {
             const claimDate = input.value;
             if (!requestId || !claimDate) return;
 
-            const res = await postRequest('claim_request.php', { request_id: requestId, claim_date: claimDate });
-            if (!res.success) alert('Failed to update claim date');
+            try {
+                const res = await postRequest('update_request.php', { 
+                    request_id: requestId, 
+                    action: 'update_claim_date', 
+                    claim_date: claimDate // ✅ only send date, no status
+                });
+
+                if (res.success) {
+                    alert(res.message); // backend will say whether it's In Queue Now or To Be Claimed
+                } else {
+                    alert('Failed: ' + res.message);
+                }
+            } catch (err) {
+                console.error("Error updating claim date:", err);
+                alert('Something went wrong.');
+            }
         });
     });
 }
 setupClaimDateInputs();
+
 
 /* =================== APPROVE / FINISH / PENDING / DECLINE BUTTONS =================== */
 document.addEventListener('click', async function(e) {

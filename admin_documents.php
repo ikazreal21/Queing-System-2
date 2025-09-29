@@ -130,7 +130,7 @@ $documents = $pdo->query("SELECT * FROM documents ORDER BY name ASC")->fetchAll(
 
             <div class="bottom-content">
             <li class="nav-link">
-                        <button class="tablinks"><a href="logout_admin.php" class="tablinks">Logout</a></button>
+                        <button class="tablinks"><a href="logout_user.php" class="tablinks">Logout</a></button>
                     </li>
             </div>
         </div>

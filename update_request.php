@@ -138,6 +138,39 @@ try {
             $message = "Added as Walk-In";
             break;
 
+        // UPDATE CLAIM DATE
+case 'update_claim_date':
+    $claim_date = $input['claim_date'] ?? $_POST['claim_date'] ?? null;
+    if (!$claim_date) throw new Exception("No claim date provided.");
+
+    // Auto-decide status
+    $today = date('Y-m-d');
+    $picked = date('Y-m-d', strtotime($claim_date));
+
+    if ($picked === $today) {
+        $status = 'In Queue Now';
+    } else {
+        $status = 'To Be Claimed';
+    }
+
+    $stmt = $pdo->prepare("
+        UPDATE requests
+        SET claim_date = :claim_date,
+            status = :status,
+            updated_at = NOW()
+        WHERE id = :id
+    ");
+    $stmt->execute([
+        ':claim_date' => $claim_date, 
+        ':status' => $status,
+        ':id' => $request_id
+    ]);
+
+    $message = "Claim date updated to $claim_date. Status set to $status";
+    break;
+
+
+
         default:
             throw new Exception("Unknown action.");
     }
@@ -145,7 +178,7 @@ try {
     // Return updated request
     $stmt = $pdo->prepare("
         SELECT id, first_name, last_name, student_number, section, department_id, department, documents, notes, attachment,
-               status, processing_start, processing_end, approved_date, completed_date, scheduled_date, updated_at, queueing_num, serving_position, walk_in
+               status, processing_start, processing_end, approved_date, completed_date, scheduled_date, claim_date, updated_at, queueing_num, serving_position, walk_in
         FROM requests
         WHERE id = :id
     ");

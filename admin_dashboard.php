@@ -9,7 +9,7 @@ session_start();
 if (isset($_SESSION['user_email'])) {
     $user_email = $_SESSION['user_email'];
 
-    // Fetch user details from the database
+    // Fetch user details
     $stmt = $pdo->prepare("SELECT first_name, last_name, email, role FROM users WHERE email = :email");
     $stmt->execute(['email' => $user_email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -34,22 +34,54 @@ if (isset($_SESSION['user_email'])) {
     exit();
 }
 
-// System statistics
-$totalRequests = $pdo->query("SELECT COUNT(*) FROM requests")->fetchColumn();
-$pendingRequests = $pdo->query("SELECT COUNT(*) FROM requests WHERE status = 'pending'")->fetchColumn();
-$approvedRequests = $pdo->query("SELECT COUNT(*) FROM requests WHERE status = 'approved'")->fetchColumn();
-$declinedRequests = $pdo->query("SELECT COUNT(*) FROM requests WHERE status = 'declined'")->fetchColumn();
-$servingRequests = $pdo->query("SELECT COUNT(*) FROM requests WHERE status = 'serving'")->fetchColumn();
+// ================= SYSTEM STATISTICS =================
+$totalRequests      = $pdo->query("SELECT COUNT(*) FROM requests")->fetchColumn();
+$pendingRequests    = $pdo->query("SELECT COUNT(*) FROM requests WHERE status = 'Pending'")->fetchColumn();
+$processingRequests = $pdo->query("SELECT COUNT(*) FROM requests WHERE status = 'Processing'")->fetchColumn();
+$servingRequests    = $pdo->query("SELECT COUNT(*) FROM requests WHERE status = 'Serving'")->fetchColumn();
+$completedRequests  = $pdo->query("SELECT COUNT(*) FROM requests WHERE status = 'Completed'")->fetchColumn();
+$declinedRequests   = $pdo->query("SELECT COUNT(*) FROM requests WHERE status = 'Declined'")->fetchColumn();
 
-// ✅ Fetch all requests directly (no join needed)
-$stmt = $pdo->query("
-    SELECT * 
-    FROM requests 
-    ORDER BY id DESC
+// ================= FILTER HANDLING =================
+$filter = $_GET['filter'] ?? 'overall'; // default: overall
+
+$whereDate = '';
+if ($filter === 'daily') {
+    $whereDate = "AND DATE(r.completed_date) = CURDATE()";
+} elseif ($filter === 'weekly') {
+    $whereDate = "AND YEARWEEK(r.completed_date, 1) = YEARWEEK(CURDATE(), 1)";
+} elseif ($filter === 'monthly') {
+    $whereDate = "AND YEAR(r.completed_date) = YEAR(CURDATE()) 
+                  AND MONTH(r.completed_date) = MONTH(CURDATE())";
+}
+
+// ================= STAFF COMPLETED REQUESTS (with filter) =================
+$stmt = $pdo->prepare("
+    SELECT 
+        u.id AS staff_id,
+        CONCAT(u.first_name, ' ', u.last_name) AS staff_name,
+        u.counter_no,
+        d.name AS department_name,
+        COUNT(r.id) AS completed_requests
+    FROM users u
+    LEFT JOIN requests r 
+           ON r.served_by = u.id 
+          AND r.status = 'Completed' 
+          $whereDate
+    LEFT JOIN departments d 
+           ON u.department_id = d.id
+    WHERE u.role = 'staff'
+    GROUP BY u.id, u.first_name, u.last_name, u.counter_no, d.name
+    ORDER BY completed_requests DESC
 ");
+$stmt->execute();
+$staff_completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
+// ================= ALL REQUESTS =================
+$stmt = $pdo->query("SELECT * FROM requests ORDER BY id DESC");
 $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -84,94 +116,146 @@ $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </ul>
             </div>
             <div class="bottom-content">
-                <li class="nav-link"><a href="logout_admin.php" class="tablinks">Logout</a></li>
+                <li class="nav-link"><a href="logout_user.php" class="tablinks">Logout</a></li>
             </div>
         </div>
     </nav>
 
     <section class="home" id="home-section">
-        <!-- System Statistics -->
+        <!-- ================== System Statistics ================== -->
         <div class="stats-container">
             <div class="stat"><div class="stat-content"><h1><?php echo $totalRequests; ?></h1><h3>Total Requests</h3></div></div>
             <div class="stat"><div class="stat-content"><h1><?php echo $servingRequests; ?></h1><h3>Serving</h3></div></div>
             <div class="stat"><div class="stat-content"><h1><?php echo $pendingRequests; ?></h1><h3>Pending</h3></div></div>
-            <div class="stat"><div class="stat-content"><h1><?php echo $approvedRequests; ?></h1><h3>Approved</h3></div></div>
+            <div class="stat"><div class="stat-content"><h1><?php echo $processingRequests; ?></h1><h3>Processing</h3></div></div>
+            <div class="stat"><div class="stat-content"><h1><?php echo $completedRequests; ?></h1><h3>Completed</h3></div></div>
             <div class="stat"><div class="stat-content"><h1><?php echo $declinedRequests; ?></h1><h3>Declined</h3></div></div>
         </div>
 
-        <div class="table-container">
-            <div class="table_responsive">
-                <h1>LIST OF ALL REQUESTS</h1>
-                <br>
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 20%;">Request ID</th>
-                            <th style="width: 20%;">Name</th>
-                            <th style="width: 15%;">Status</th>
-                            <th style="width: 25%;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($requests as $row): 
-                            $requestId = 'REQ' . str_pad($row['id'], 3, '0', STR_PAD_LEFT);
-                            $status = ucfirst($row['status']);
-                            $fullName = $row['first_name'] . ' ' . $row['last_name'];
-                        ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($requestId); ?></td>
-                            <td><?php echo htmlspecialchars($fullName); ?></td>
-                            <td>
-                                <span class="status <?php echo strtolower($status); ?>">
-                                    <?php echo htmlspecialchars($status); ?>
-                                </span>
-                            </td>
-                            <td>
-                                <button 
-                                    type="button" 
-                                    class="view-details-btn"
-                                    data-request-id="<?php echo htmlspecialchars($requestId); ?>"
-                                    data-name="<?php echo htmlspecialchars($fullName); ?>"
-                                    data-student-number="<?php echo htmlspecialchars($row['student_number']); ?>"
-                                    data-section="<?php echo htmlspecialchars($row['section']); ?>"
-                                    data-school-year="<?php echo htmlspecialchars($row['last_school_year']); ?>"
-                                    data-semester="<?php echo htmlspecialchars($row['last_semester']); ?>"
-                                    data-documents="<?php echo htmlspecialchars($row['documents']); ?>"
-                                    data-notes="<?php echo htmlspecialchars($row['notes'] ?? ''); ?>"
-                                    data-submitted="<?php echo htmlspecialchars($row['created_at']); ?>"
-                                    data-status="<?php echo htmlspecialchars($status); ?>"
-                                    data-reasons="<?php echo htmlspecialchars($row['decline_reason'] ?? ''); ?>"
-                                >
-                                    View Details
-                                </button>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+        <div style="text-align:center; margin-bottom:20px;">
+    <form method="GET" action="admin_dashboard.php" style="display:inline-block;">
+        <label for="filter">Filter by:</label>
+        <select name="filter" id="filter" onchange="this.form.submit()">
+            <option value="overall" <?php if($filter==='overall') echo 'selected'; ?>>Overall</option>
+            <option value="daily" <?php if($filter==='daily') echo 'selected'; ?>>Today</option>
+            <option value="weekly" <?php if($filter==='weekly') echo 'selected'; ?>>This Week</option>
+            <option value="monthly" <?php if($filter==='monthly') echo 'selected'; ?>>This Month</option>
+        </select>
+    </form>
+</div>
 
-                <!-- Modal -->
-                <div id="detailsModal" class="modal">
-                    <div class="modal-content">
-                        <span class="close-btn">&times;</span>
-                        <h2>Request Details</h2>
-                        <hr>
-                        <p><strong>Request ID:</strong> <span id="modalRequestId"></span></p>
-                        <p><strong>Name:</strong> <span id="modalName"></span></p>
-                        <p><strong>Student Number:</strong> <span id="modalStudentNumber"></span></p>
-                        <p><strong>Section:</strong> <span id="modalSection"></span></p>
-                        <p><strong>Last School Year:</strong> <span id="modalSchoolYear"></span></p>
-                        <p><strong>Last Semester:</strong> <span id="modalSemester"></span></p>
-                        <p><strong>Documents Requested:</strong> <span id="modalDocuments"></span></p>
-                        <p><strong>Additional Notes:</strong> <span id="modalNotes"></span></p>
-                        <p><strong>Status:</strong> <span id="modalStatus"></span></p>
-                        <p><strong>Reason (if any):</strong> <span id="modalReasons"></span></p>
-                        <p><strong>Submitted At:</strong> <span id="modalSubmitted"></span></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+
+        <!-- ================== Staff Completed Requests ================== -->
+<div class="table-container">
+    <div class="table_responsive">
+        <h1 style="margin-bottom:15px; font-size:22px; color:#333; text-align:center;">
+            Staff Completed Requests
+        </h1>
+        <table class="styled-table">
+    <thead>
+        <tr>
+            <th>Staff Name</th>
+            <th>Counter No.</th>
+            <th>Department</th>
+            <th>Completed Requests</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php if (!empty($staff_completed)): ?>
+            <?php foreach ($staff_completed as $row): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($row['staff_name']); ?></td>
+                    <td><?php echo htmlspecialchars($row['counter_no'] ?? 'N/A'); ?></td>
+                    <td><?php echo htmlspecialchars($row['department_name'] ?? 'N/A'); ?></td>
+                    <td class="center"><?php echo $row['completed_requests']; ?></td>
+                </tr>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <tr>
+                <td colspan="4" class="center">No completed requests yet.</td>
+            </tr>
+        <?php endif; ?>
+    </tbody>
+</table>
+
+    </div>
+</div>
+
+<!-- ================== Chart.js Bar Chart ================== -->
+<div style="max-width: 800px; margin: 30px auto;">
+    <canvas id="staffChart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const staffNames = <?php echo json_encode(array_column($staff_completed, 'staff_name')); ?>;
+    const completedCounts = <?php echo json_encode(array_column($staff_completed, 'completed_requests')); ?>;
+
+    const ctx = document.getElementById('staffChart').getContext('2d');
+
+    // Create gradient color for bars
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(54, 162, 235, 0.9)');
+    gradient.addColorStop(1, 'rgba(54, 162, 235, 0.3)');
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: staffNames,
+            datasets: [{
+                label: 'Completed Requests',
+                data: completedCounts,
+                backgroundColor: gradient,
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                borderRadius: 8,
+                hoverBackgroundColor: 'rgba(75, 192, 192, 0.9)'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: 'Completed Requests per Staff',
+                    font: { size: 20, weight: 'bold' },
+                    padding: { top: 10, bottom: 20 }
+                },
+                tooltip: {
+                    backgroundColor: '#333',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: '#999',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function(context) {
+                            return ` ${context.raw} request(s) completed`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        font: { size: 14 }
+                    },
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        font: { size: 14 }
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+
+
 
 <script src="admin_dashboard.js"></script>
 </body>

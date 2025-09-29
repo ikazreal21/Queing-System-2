@@ -23,14 +23,16 @@ try {
         throw new Exception("Cannot claim: status is not 'To Be Claimed'");
     }
 
-    // Update request to "In Queue Now"
-    $stmtUpdate = $pdo->prepare("
-        UPDATE requests
-        SET status = 'In Queue Now',
-            updated_at = NOW()
-        WHERE id = :id
-    ");
-    $stmtUpdate->execute([':id' => $request_id]);
+    // Update request to "In Queue Now" and set claim_date
+$stmtUpdate = $pdo->prepare("
+    UPDATE requests
+    SET status = 'In Queue Now',
+        claim_date = NOW(),
+        updated_at = NOW()
+    WHERE id = :id
+");
+$stmtUpdate->execute([':id' => $request_id]);
+
 
     $_SESSION['flash_message'] = [
         'type' => 'success',

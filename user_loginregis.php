@@ -39,7 +39,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["register"])) {
     $stmt->close();
 }
 
-// ===================== LOGIN =====================
+// ===================== LOGIN (for all roles) =====================
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["login"])) {
     $email = $_POST['email'];
     $password = $_POST['password'];
@@ -50,16 +50,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["login"])) {
     $result = $stmt->get_result();
     $user = $result->fetch_assoc();
 
-    if ($user && password_verify($password, $user['password']) && $user['role'] === 'user') {
+    if ($user && password_verify($password, $user['password'])) {
+        // Save session data
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_id'] = $user['id'];
-        header("Location: user_dashboard.php");
+        $_SESSION['role'] = $user['role'];
+
+        // Redirect based on role
+        if ($user['role'] === 'admin') {
+            header("Location: admin_dashboard.php");
+        } elseif ($user['role'] === 'staff') {
+            header("Location: staff_dashboard.php");
+        } elseif ($user['role'] === 'user') {
+            header("Location: user_dashboard.php");
+        } else {
+            echo "<script>alert('Unknown role. Contact admin.');</script>";
+        }
         exit;
     } else {
-        echo "<script>alert('Invalid credentials or unauthorized access.');</script>";
+        echo "<script>alert('Invalid email or password.');</script>";
     }
     $stmt->close();
 }
+
 
 // ===================== AJAX Actions =====================
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["action"])) {
@@ -263,11 +276,6 @@ $conn->close();
             <a href="#" id="terms">terms & conditions</a>
             <button type="submit" class="submit-btn" name="register">Register</button>
         </form>
-    </div>
-
-    <div id="roles" class="roles">
-        <a href="admin_loginregis.php">Admin &nbsp; — </a> &nbsp;
-        <a href="staff_login.php">Staff</a>
     </div>
     <button type="button" class="back-btn" onclick="window.location.href='index.php';">Back</button>
 </div>

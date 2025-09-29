@@ -2,47 +2,80 @@
 session_start();
 include('db.php'); // PDO connection
 
-// Redirect if not logged in
+// Make sure user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header("Location: index.php");
+    header("Location: index.php"); // redirect to login if not logged in
     exit();
 }
 
-// Check if user is staff
+// Fetch user info
 $stmt = $pdo->prepare("SELECT first_name, last_name, role FROM users WHERE id = ?");
 $stmt->execute([$_SESSION['user_id']]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$user || $user['role'] !== 'staff') {
-    // Not a staff → deny access
+if (!$user) {
+    // If no user found, force logout
+    session_destroy();
     header("Location: index.php");
     exit();
 }
 
-// Staff full name
+// ✅ Allow only staff accounts
+if ($user['role'] !== 'staff') {
+    header("Location: index.php"); // redirect if not staff
+    exit();
+}
+
 $full_name = $user['first_name'] . ' ' . $user['last_name'];
+$staff_departments = [];
 
+// Fetch staff's assigned departments (department_id)
+$stmt = $pdo->prepare("SELECT department_id FROM staff_departments WHERE staff_id = ?");
+$stmt->execute([$_SESSION['user_id']]);
+$staff_departments = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-// ✅ Queueing / Updated: include only 'In Queue Now' and null claim_date
+// If staff has no departments, set a dummy value so no requests are fetched
+if (empty($staff_departments)) {
+    $staff_departments = [-1]; // impossible department
+}
+
+$inQuery = implode(',', array_fill(0, count($staff_departments), '?'));
+
+// ✅ Queueing / Only show if claim_date is today
 $stmt = $pdo->prepare("
     SELECT * FROM requests 
     WHERE status = 'In Queue Now'
-      AND (claim_date IS NULL OR DATE(claim_date) = CURDATE())
+    AND claim_date IS NOT NULL
+    AND DATE(claim_date) = CURDATE()
+    AND department IN ($inQuery)
     ORDER BY id ASC
 ");
-$stmt->execute();
+$stmt->execute($staff_departments);
 $queueing = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // ✅ Serving: status 'Serving'
-$stmt = $pdo->prepare("SELECT * FROM requests WHERE status='Serving' ORDER BY serving_position ASC");
-$stmt->execute();
+$stmt = $pdo->prepare("
+    SELECT * FROM requests 
+    WHERE status='Serving' 
+    AND department IN ($inQuery)
+    ORDER BY serving_position ASC
+");
+$stmt->execute($staff_departments);
 $serving = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // ✅ Completed: status 'Completed'
-$stmt = $pdo->prepare("SELECT * FROM requests WHERE status='Completed' ORDER BY approved_date DESC");
-$stmt->execute();
+$stmt = $pdo->prepare("
+    SELECT * FROM requests 
+    WHERE status='Completed' 
+    AND department IN ($inQuery)
+    ORDER BY approved_date DESC
+");
+$stmt->execute($staff_departments);
 $completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -74,7 +107,7 @@ $completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </ul>
         </div>
         <div class="bottom-content">
-            <li class="nav-link"><button class="tablinks"><a href="logout_staff.php" class="tablinks">Logout</a></button></li>
+            <li class="nav-link"><button class="tablinks"><a href="logout_user.php" class="tablinks">Logout</a></button></li>
         </div>
     </div>
 </nav>

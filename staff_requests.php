@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </ul>
         </div>
         <div class="bottom-content">
-            <li class="nav-link"><button class="tablinks"><a href="logout_staff.php" class="tablinks">Logout</a></button></li>
+            <li class="nav-link"><button class="tablinks"><a href="logout_user.php" class="tablinks">Logout</a></button></li>
         </div>
     </div>
 </nav>
@@ -255,7 +255,6 @@ document.addEventListener("DOMContentLoaded", () => {
     </div>
 </div>
 
-
 <!-- TO BE CLAIMED -->
 <div class="archives-box" style="display:flex; flex-direction:column;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -273,35 +272,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 </tr>
             </thead>
             <tbody>
-            <?php 
-            // Only fetch 'To Be Claimed'
-            $sql = "SELECT * FROM requests WHERE status = 'To Be Claimed'";
-            $params = [];
-
-            // Filter by staff departments if needed
-            if (!empty($staff_departments)) {
-                $placeholders = implode(',', array_fill(0, count($staff_departments), '?'));
-                $sql .= " AND department IN ($placeholders)";
-                $params = $staff_departments;
-            }
-
-            $sql .= " ORDER BY id ASC";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
-            $toBeClaimRequests = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            foreach ($toBeClaimRequests as $req): ?>
+            <?php foreach ($requests['To Be Claimed'] as $req): ?>
                 <tr data-request-id="<?= $req['id'] ?>">
                     <td><?= $req['id'] ?></td>
                     <td><?= htmlspecialchars($req['first_name'] . " " . $req['last_name']) ?></td>
                     <td><?= htmlspecialchars($req['documents']) ?></td>
                     <td>
-                        <?php if($req['attachment']): ?>
+                        <?php if ($req['attachment']): ?>
                             <button class="action-btn view-btn" data-attachment="<?= htmlspecialchars($req['attachment']) ?>">View</button>
-                        <?php else: ?>No attachment<?php endif; ?>
+                        <?php else: ?>
+                            No attachment
+                        <?php endif; ?>
                     </td>
                     <td>
-                        <input type="date" class="claim-date" data-request="<?= $req['id'] ?>" value="<?= htmlspecialchars($req['claim_date'] ?? ''); ?>">
+                        <input type="date" class="claim-date" 
+                               data-request="<?= $req['id'] ?>" 
+                               value="<?= $req['claim_date'] && $req['claim_date'] !== '0000-00-00' 
+                                            ? htmlspecialchars($req['claim_date']) 
+                                            : '' ?>">
                     </td>
                 </tr>
             <?php endforeach; ?>
@@ -309,6 +297,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </table>
     </div>
 </div>
+
 
 
 

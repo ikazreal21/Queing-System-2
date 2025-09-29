@@ -126,8 +126,6 @@ if (isset($_POST['updateStaff'])) {
     exit();
 }
 
-
-
 ?>
 
 <!DOCTYPE html>
@@ -164,7 +162,7 @@ if (isset($_POST['updateStaff'])) {
             </ul>
         </div>
         <div class="bottom-content">
-            <li class="nav-link"><a href="logout_admin.php" class="tablinks">Logout</a></li>
+            <li class="nav-link"><a href="logout_user.php" class="tablinks">Logout</a></li>
         </div>
     </div>
 </nav>
@@ -303,7 +301,8 @@ if (isset($_POST['updateStaff'])) {
           // Fetch all departments
           $deptStmt = $pdo->query("SELECT * FROM departments");
           while ($dept = $deptStmt->fetch(PDO::FETCH_ASSOC)) {
-              echo "<label><input type='checkbox' name='departments[]' value='{$dept['id']}'> {$dept['name']}</label><br>";
+              echo "<label><input type='checkbox' name='departments[]' value='{$dept['id']}'><span>{$dept['name']}</span></label>";
+
           }
         ?>
       </div>
@@ -312,7 +311,6 @@ if (isset($_POST['updateStaff'])) {
     </form>
   </div>
 </div>
-
 
 <!-- Delete Modal -->
 <div id="deleteStaffModal" class="modal" style="display:none;">
@@ -329,31 +327,169 @@ if (isset($_POST['updateStaff'])) {
 </div>
 
 <style>
+/* General Modal Background */
 .modal {
   display: none;
   position: fixed;
   z-index: 1000;
   left: 0; top: 0;
   width: 100%; height: 100%;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
 }
+
+/* Modal Box */
 .modal-content {
   background: #fff;
-  margin: 10% auto;
-  padding: 20px;
-  width: 400px;
-  border-radius: 8px;
+  margin: 8% auto;
+  padding: 25px 30px;
+  width: 450px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  font-family: Arial, sans-serif;
+  animation: fadeIn 0.3s ease-out;
 }
+
+/* Title */
+.modal-content h2 {
+  margin-top: 0;
+  font-size: 22px;
+  text-align: center;
+  color: #333;
+}
+
+/* Labels */
+.modal-content label {
+  display: block;
+  margin: 12px 0 5px;
+  font-weight: bold;
+  color: #444;
+}
+
+/* Inputs */
+.modal-content input[type="text"],
+.modal-content input[type="email"],
+.modal-content input[type="number"] {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  margin-bottom: 10px;
+  transition: border 0.2s;
+}
+
+.modal-content input:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+/* Department checkboxes container */
+#departmentsCheckboxes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 2 columns */
+  gap: 8px 15px;
+  margin-top: 8px;
+}
+
+/* Checkbox label cards */
+#departmentsCheckboxes label {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: normal;
+  background: #f8f9fa;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  transition: background 0.2s, border 0.2s, box-shadow 0.2s;
+}
+
+/* Hover effect */
+#departmentsCheckboxes label:hover {
+  background: #e9ecef;
+  border-color: #ccc;
+}
+
+/* Checkbox spacing */
+#departmentsCheckboxes input {
+  margin-right: 8px;
+}
+
+/* Highlight selected checkboxes */
+#departmentsCheckboxes input:checked + span {
+  font-weight: bold;
+  color: #28a745;
+}
+#departmentsCheckboxes input:checked:parent {
+  border-color: #28a745;
+  box-shadow: 0 0 5px rgba(40,167,69,0.4);
+}
+
+/* Buttons */
+.modal-content button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+  margin-top: 10px;
+}
+
+.modal-content button[name="updateStaff"] {
+  background: #28a745;
+  color: #fff;
+  width: 100%;
+}
+
+.modal-content button[name="updateStaff"]:hover {
+  background: #218838;
+}
+
+.modal-content button[name="deleteStaff"] {
+  background: #dc3545;
+  color: #fff;
+  margin-right: 10px;
+}
+
+.modal-content button[name="deleteStaff"]:hover {
+  background: #c82333;
+}
+
+.modal-content button#cancelDelete {
+  background: #6c757d;
+  color: #fff;
+}
+
+.modal-content button#cancelDelete:hover {
+  background: #5a6268;
+}
+
+/* Close button (X) */
 .close-btn {
   float: right;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 22px;
+  font-weight: bold;
+  color: #999;
+  transition: color 0.2s;
 }
+
+.close-btn:hover {
+  color: #333;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from {opacity: 0; transform: translateY(-20px);}
+  to {opacity: 1; transform: translateY(0);}
+}
+
 </style>
 
 
-
-</section>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const editModal = document.getElementById("editStaffModal");
@@ -374,6 +510,18 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("edit_last_name").value = row.dataset.lastname;
       document.getElementById("edit_email").value = row.dataset.email;
       document.getElementById("edit_counter_no").value = row.dataset.counter;
+
+      // Reset all checkboxes
+      document.querySelectorAll("#departmentsCheckboxes input[type=checkbox]").forEach(cb => cb.checked = false);
+
+      // Pre-check departments (expects row.dataset.departments = "1,3,5")
+      if (row.dataset.departments) {
+        const deptArray = row.dataset.departments.split(",");
+        deptArray.forEach(deptId => {
+          let checkbox = document.querySelector(`#departmentsCheckboxes input[value='${deptId}']`);
+          if (checkbox) checkbox.checked = true;
+        });
+      }
 
       editModal.style.display = "block";
     });
@@ -400,6 +548,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 </script>
+
 
 
 <script src="admin_manage.js"></script>
