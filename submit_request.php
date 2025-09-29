@@ -1,6 +1,7 @@
 <?php
 session_start();
 require "db.php"; // your PDO connection ($pdo)
+require "cloudinary_helper.php"; // Cloudinary helper class
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     try {
@@ -15,28 +16,48 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $documents        = isset($_POST['documents']) ? implode(", ", $_POST['documents']) : '';
         $notes            = $_POST['notes'] ?? '';
 
-        // Handle multiple file uploads
+        // Handle multiple file uploads using Cloudinary
         $attachments = [];
         $status = "Declined"; // default if no attachment
 
         if (!empty($_FILES['attachment']['name'][0])) {
-            $targetDir = "uploads/";
-            if (!is_dir($targetDir)) {
-                mkdir($targetDir, 0777, true);
-            }
+            $cloudinary = new CloudinaryHelper();
+            $allowedTypes = ["jpg", "jpeg", "png", "pdf"];
 
             foreach ($_FILES['attachment']['name'] as $key => $name) {
                 $fileTmp  = $_FILES['attachment']['tmp_name'][$key];
                 $fileType = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-                $allowedTypes = ["jpg", "jpeg", "png", "pdf"];
+                $fileSize = $_FILES['attachment']['size'][$key];
 
-                if (in_array($fileType, $allowedTypes)) {
-                    $fileName = time() . "_" . $key . "_" . basename($name);
-                    $targetFilePath = $targetDir . $fileName;
+                // Validate file type
+                if (!in_array($fileType, $allowedTypes)) {
+                    continue; // Skip invalid file types
+                }
 
-                    if (move_uploaded_file($fileTmp, $targetFilePath)) {
-                        $attachments[] = $fileName;
-                    }
+                // Validate file size (max 10MB)
+                if ($fileSize > 10 * 1024 * 1024) {
+                    continue; // Skip files larger than 10MB
+                }
+
+                // Validate uploaded file
+                if (!is_uploaded_file($fileTmp)) {
+                    continue; // Skip if not a valid uploaded file
+                }
+
+                // Upload to Cloudinary
+                $uploadResult = $cloudinary->uploadFile($fileTmp, $name);
+
+                if ($uploadResult['success']) {
+                    $attachments[] = [
+                        'url' => $uploadResult['url'],
+                        'public_id' => $uploadResult['public_id'],
+                        'original_name' => $uploadResult['original_name'],
+                        'file_type' => $uploadResult['file_type'],
+                        'file_size' => $uploadResult['file_size']
+                    ];
+                } else {
+                    // Log error for debugging
+                    error_log("Failed to upload file {$name}: " . $uploadResult['error']);
                 }
             }
 
@@ -45,7 +66,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         }
 
-        $attachmentStr = !empty($attachments) ? implode(", ", $attachments) : null;
+        // Convert attachments array to JSON string for database storage
+        $attachmentStr = !empty($attachments) ? json_encode($attachments) : null;
 
         // 🔹 Calculate processing time + dates
         $processing_days = null;
