@@ -5,6 +5,7 @@ require "cloudinary_helper.php"; // Cloudinary helper class
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     try {
+
         // Sanitize inputs
         $first_name       = $_POST['first_name'] ?? '';
         $last_name        = $_POST['last_name'] ?? '';
@@ -20,7 +21,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $attachments = [];
         $status = "Declined"; // default if no attachment
 
-        if (!empty($_FILES['attachment']['name'][0])) {
+        if (!empty($_FILES['attachment'])) {
+
             $cloudinary = new CloudinaryHelper();
             $allowedTypes = ["jpg", "jpeg", "png", "pdf"];
 
@@ -46,17 +48,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 // Upload to Cloudinary
                 $uploadResult = $cloudinary->uploadFile($fileTmp, $name);
-
                 if ($uploadResult['success']) {
-                    $attachments[] = [
-                        'url' => $uploadResult['url'],
-                        'public_id' => $uploadResult['public_id'],
-                        'original_name' => $uploadResult['original_name'],
-                        'file_type' => $uploadResult['file_type'],
-                        'file_size' => $uploadResult['file_size']
-                    ];
+                    $attachments[] = $uploadResult['url']; // ✅ fix: push into array
                 } else {
-                    // Log error for debugging
                     error_log("Failed to upload file {$name}: " . $uploadResult['error']);
                 }
             }
@@ -67,10 +61,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
         // Convert attachments array to JSON string for database storage
-        $attachmentStr = !empty($attachments) ? json_encode($attachments) : null;
+        $attachmentStr = !empty($attachments) ? json_encode($attachments, JSON_UNESCAPED_SLASHES) : null;
 
         // 🔹 Calculate processing time + dates
-        $processing_days = null;
+        $processing_time = null;
         $processing_start = null;
         $processing_deadline = null;
         $scheduled_date = null;
@@ -83,7 +77,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $max_days = (int)$stmtDocs->fetchColumn();
 
             if ($max_days > 0) {
-                $processing_days = $max_days;
+                $processing_time = $max_days;
                 $stmtNow = $pdo->query("SELECT NOW()");
                 $processing_start = $stmtNow->fetchColumn();
 
@@ -94,14 +88,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         }
 
-        // 🔹 Calculate queue number per department
-        $stmtQueue = $pdo->prepare("SELECT MAX(queueing_num) FROM requests WHERE department = ?");
-        $stmtQueue->execute([$department]);
-        $maxQueue = $stmtQueue->fetchColumn();
-        $queueing_num = $maxQueue ? $maxQueue + 1 : 1;
+        // 🔹 Only assign queue number if not Declined
+        $queueing_num = null;
+        $serving_position = null;
 
-        // 🔹 Optional: serving_position same as queueing_num initially
-        $serving_position = $queueing_num;
+        if ($status !== "Declined") {
+            $stmtQueue = $pdo->prepare("SELECT MAX(queueing_num) FROM requests WHERE department = ?");
+            $stmtQueue->execute([$department]);
+            $maxQueue = $stmtQueue->fetchColumn();
+            $queueing_num = $maxQueue ? $maxQueue + 1 : 1;
+
+            // serving_position = queueing_num initially
+            $serving_position = $queueing_num;
+        }
 
         // Insert into DB
         $sql = "INSERT INTO requests 
@@ -109,7 +108,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
              processing_time, processing_start, processing_deadline, scheduled_date, queueing_num, serving_position, created_at, updated_at) 
             VALUES 
             (:first_name, :last_name, :student_number, :section, :department, :last_school_year, :last_semester, :documents, :notes, :attachment, :status,
-             :processing_days, :processing_start, :processing_deadline, :scheduled_date, :queueing_num, :serving_position, NOW(), NOW())";
+             :processing_time, :processing_start, :processing_deadline, :scheduled_date, :queueing_num, :serving_position, NOW(), NOW())";
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
@@ -124,7 +123,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             ':notes'              => $notes,
             ':attachment'         => $attachmentStr,
             ':status'             => $status,
-            ':processing_days'    => $processing_days,
+            ':processing_time'    => $processing_time,
             ':processing_start'   => $processing_start,
             ':processing_deadline'=> $processing_deadline,
             ':scheduled_date'     => $scheduled_date,

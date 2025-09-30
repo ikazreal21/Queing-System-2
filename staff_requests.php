@@ -104,7 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Only refresh if BOTH modals are NOT visible
         if (walkinDisplay !== "block" && confirmDisplay !== "block") {
-            window.location.reload();
+            // window.location.reload();
         }
     }, refreshInterval);
 });
@@ -279,7 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td><?= htmlspecialchars($req['documents']) ?></td>
                     <td>
                         <?php if ($req['attachment']): ?>
-                            <button class="action-btn view-btn" data-attachment="<?= htmlspecialchars($req['attachment']) ?>">View</button>
+                            <button class="action-btn view-btn" data-attachment="<?= $req['attachment'] ?>">View</button>
                         <?php else: ?>
                             No attachment
                         <?php endif; ?>

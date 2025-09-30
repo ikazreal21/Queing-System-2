@@ -51,11 +51,11 @@ function displayAttachment(filename) {
     if (ext === 'pdf') {
         lightboxImage.style.display = 'none';
         lightboxPDF.style.display = 'block';
-        lightboxPDF.src = 'uploads/' + filename;
+        lightboxPDF.src = filename;
     } else {
         lightboxPDF.style.display = 'none';
         lightboxImage.style.display = 'block';
-        lightboxImage.src = 'uploads/' + filename;
+        lightboxImage.src = filename;
     }
 }
 
@@ -63,6 +63,8 @@ document.addEventListener('click', function(e) {
     if (e.target && e.target.classList.contains('view-btn')) {
         const attachments = e.target.dataset.attachment.split(',').map(a => a.trim()).filter(a => a);
         if (attachments.length === 0) return;
+
+        console.log('Attachments:', attachments);
 
         attachmentSelector.innerHTML = '';
         attachments.forEach((att, index) => {

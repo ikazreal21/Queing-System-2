@@ -6,9 +6,9 @@ date_default_timezone_set('Asia/Manila');
 header('Content-Type: application/json');
 
 // Database connection
-$servername = "localhost";
-$username = "root";
-$password = "";
+$servername = "192.168.3.5";
+$username = "cbadmin";
+$password = "%rga8477#KC86&";
 $dbname = "queue";
 
 $conn = new mysqli($servername, $username, $password, $dbname);
@@ -26,8 +26,12 @@ if (empty($email) || empty($password)) {
     exit;
 }
 
-// Prepare statement to fetch user by email
-$stmt = $conn->prepare("SELECT id, first_name, last_name, email, password, role, department_id, counter_no FROM users WHERE email = ?");
+// Fetch user by email
+$stmt = $conn->prepare("
+    SELECT id, first_name, last_name, email, password, role, department_id, counter_no, student_number
+    FROM users
+    WHERE email = ?
+");
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -41,7 +45,7 @@ if ($result->num_rows === 0) {
 
 $user = $result->fetch_assoc();
 
-// Verify password using password_verify
+// Verify password
 if (!password_verify($password, $user['password'])) {
     echo json_encode(['status' => 'error', 'message' => 'Incorrect password']);
     $stmt->close();
@@ -54,7 +58,10 @@ $_SESSION['user_id'] = $user['id'];
 $_SESSION['user_email'] = $user['email'];
 $_SESSION['user_role'] = $user['role'];
 
-// Return success JSON with user info
+// Ensure student_number is always a string
+$student_number = $user['student_number'] ?? '';
+
+// Return success JSON
 echo json_encode([
     'status' => 'success',
     'message' => 'Login successful',
@@ -65,7 +72,8 @@ echo json_encode([
         'email' => $user['email'],
         'role' => $user['role'],
         'department_id' => $user['department_id'],
-        'counter_no' => $user['counter_no']
+        'counter_no' => $user['counter_no'],
+        'student_number' => $student_number
     ]
 ]);
 

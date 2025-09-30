@@ -1,9 +1,10 @@
 <?php
 // Database credentials
-$host = 'localhost'; // Replace with your database host (e.g., 'localhost' or IP address)
+// $host = 'localhost'; // Replace with your database host (e.g., 'localhost' or IP address)
+$host = '192.168.3.5'; // Replace with your database host (e.g., 'localhost' or IP address)
 $dbname = 'queue'; // Your database name
-$username = 'root'; // Your database username
-$password = ''; // Your database password (empty if no password)
+$username = 'cbadmin'; // Your database username
+$password = '%rga8477#KC86&'; // Your database password (empty if no password)
 
 // Set up the DSN (Data Source Name) for PDO
 $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8";
