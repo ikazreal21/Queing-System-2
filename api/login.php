@@ -2,7 +2,7 @@
 session_start();
 date_default_timezone_set('Asia/Manila');
 
-// Ensure JSON response only
+// JSON response
 header('Content-Type: application/json');
 
 // Database connection
@@ -18,26 +18,33 @@ if ($conn->connect_error) {
 }
 
 // Get POST data
-$email = isset($_POST['email']) ? trim($_POST['email']) : '';
+$identifier = isset($_POST['identifier']) ? trim($_POST['identifier']) : '';
 $password = isset($_POST['password']) ? $_POST['password'] : '';
 
-if (empty($email) || empty($password)) {
-    echo json_encode(['status' => 'error', 'message' => 'Email and password are required']);
+if (empty($identifier) || empty($password)) {
+    echo json_encode(['status' => 'error', 'message' => 'Email/Student Number and password are required']);
     exit;
 }
 
-// Fetch user by email
+// Fetch user by email OR student_num
 $stmt = $conn->prepare("
-    SELECT id, first_name, last_name, email, password, role, department_id, counter_no, student_number
+    SELECT id, student_num, first_name, last_name, email, password, role, department_id, counter_no
     FROM users
-    WHERE email = ?
+    WHERE email = ? OR student_num = ?
+    LIMIT 1
 ");
-$stmt->bind_param("s", $email);
+
+if (!$stmt) {
+    echo json_encode(['status' => 'error', 'message' => 'Database query preparation failed']);
+    exit;
+}
+
+$stmt->bind_param("ss", $identifier, $identifier);
 $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows === 0) {
-    echo json_encode(['status' => 'error', 'message' => 'No account found with this email']);
+    echo json_encode(['status' => 'error', 'message' => 'No account found with this email or student number']);
     $stmt->close();
     $conn->close();
     exit;
@@ -53,27 +60,33 @@ if (!password_verify($password, $user['password'])) {
     exit;
 }
 
-// Set session variables
+// ✅ Make sure student_num exists, otherwise fail login
+if (empty($user['student_num'])) {
+    echo json_encode(['status' => 'error', 'message' => 'This account does not have a student number.']);
+    $stmt->close();
+    $conn->close();
+    exit;
+}
+
+// ✅ Store user info in session (persist across requests)
 $_SESSION['user_id'] = $user['id'];
 $_SESSION['user_email'] = $user['email'];
 $_SESSION['user_role'] = $user['role'];
+$_SESSION['student_number'] = $user['student_num']; // THIS FIXES REQUESTS API
 
-// Ensure student_number is always a string
-$student_number = $user['student_number'] ?? '';
-
-// Return success JSON
+// Success response
 echo json_encode([
     'status' => 'success',
     'message' => 'Login successful',
     'user' => [
         'id' => $user['id'],
+        'student_num' => $user['student_num'],
         'first_name' => $user['first_name'],
         'last_name' => $user['last_name'],
         'email' => $user['email'],
         'role' => $user['role'],
         'department_id' => $user['department_id'],
-        'counter_no' => $user['counter_no'],
-        'student_number' => $student_number
+        'counter_no' => $user['counter_no']
     ]
 ]);
 

@@ -1,78 +1,109 @@
-    <?php
-    // Include the database connection safely
-    try {
-        include('db.php');
-        if (!isset($pdo)) {
-            // If $pdo is not set, redirect
-            header("Location: index.php");
-            exit();
-        }
-    } catch (Exception $e) {
+<?php
+// Include the database connection safely
+try {
+    include('db.php');
+    if (!isset($pdo)) {
         header("Location: index.php");
         exit();
     }
+} catch (Exception $e) {
+    header("Location: index.php");
+    exit();
+}
 
-    // Start the session
-    session_start();
+// Start the session
+session_start();
 
-    // Check if the user_email session variable is set
-    if (isset($_SESSION['user_email'])) {
-        $user_email = $_SESSION['user_email'];
+// Check if the user_email session variable is set
+if (!isset($_SESSION['user_email'])) {
+    header("Location: index.php");
+    exit();
+}
 
-        try {
-            $stmt = $pdo->prepare("SELECT first_name, last_name, email, role FROM users WHERE email = :email");
-            $stmt->execute(['email' => $user_email]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            header("Location: index.php");
-            exit();
-        }
+$user_email = $_SESSION['user_email'];
 
-        if ($user) {
-            $first_name = $user['first_name'];
-            $last_name  = $user['last_name'];
-            $role       = $user['role'];
+// Fetch user data
+try {
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE email = :email");
+    $stmt->execute(['email' => $user_email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    header("Location: index.php");
+    exit();
+}
 
-            // ✅ Restrict access only to 'user' role
-            if ($role !== 'user') {
-                header("Location: index.php");
-                exit();
-            }
+if (!$user) {
+    header("Location: index.php");
+    exit();
+}
 
-        } else {
-            header("Location: index.php");
-            exit();
-        }
-    } else {
-        header("Location: index.php");
-        exit();
-    }
+// Restrict access only to 'user' role
+if ($user['role'] !== 'user') {
+    header("Location: index.php");
+    exit();
+}
 
-    // Fetch all documents and departments
-    try {
-        $stmt = $pdo->query("SELECT * FROM documents ORDER BY name ASC");
-        $documents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// --- AUTO-GENERATE STUDENT NUM for NEW STUDENTS ---
+if ((int)($user['new_student'] ?? 0) === 1 && empty($user['student_num'])) {
+    do {
+        // Generate a 11-digit student number starting with 0322
+        $student_num = '0322' . str_pad(rand(0, 99999999), 8, '0', STR_PAD_LEFT);
 
-        $stmt = $pdo->query("SELECT * FROM departments ORDER BY name ASC");
-        $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (Exception $e) {
-        header("Location: index.php");
-        exit();
-    }
+        // Ensure uniqueness
+        $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM users WHERE student_num = :student_num");
+        $stmt_check->execute([':student_num' => $student_num]);
+        $exists = (int)$stmt_check->fetchColumn();
+    } while ($exists > 0);
 
-    // Fetch all requests for "My Requests" table
-    $stmt = $pdo->prepare("SELECT id, created_at, documents, status, decline_reason, processing_time, claim_date, queueing_num
+    // Save student_num and mark new_student as 0
+    $stmt_update = $pdo->prepare("
+        UPDATE users 
+        SET student_num = :student_num, new_student = 0 
+        WHERE email = :email
+    ");
+    $stmt_update->execute([
+        ':student_num' => $student_num,
+        ':email'       => $user_email
+    ]);
+
+    // Update local variables
+    $user['student_num'] = $student_num;
+    $user['new_student'] = 0;
+
+    // Flag to show the modal
+    $show_new_student_modal = true;
+}
+
+// Assign user info to variables
+$student_num = $user['student_num'];
+$first_name  = $user['first_name'];
+$last_name   = $user['last_name'];
+$role        = $user['role'];
+
+// Fetch all documents and departments
+try {
+    $stmt = $pdo->query("SELECT * FROM documents ORDER BY name ASC");
+    $documents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $stmt = $pdo->query("SELECT * FROM departments ORDER BY name ASC");
+    $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    header("Location: index.php");
+    exit();
+}
+
+// Fetch all requests for "My Requests" table
+$stmt = $pdo->prepare("SELECT id, created_at, documents, status, decline_reason, processing_time, claim_date, queueing_num
                         FROM requests 
                         WHERE first_name = :first_name AND last_name = :last_name 
                         ORDER BY created_at DESC");
-    $stmt->execute([
-        ':first_name' => $first_name,
-        ':last_name'  => $last_name
-    ]);
-    $my_requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt->execute([
+    ':first_name' => $first_name,
+    ':last_name'  => $last_name
+]);
+$my_requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-
-// --- Fetch student's latest active request (by name) ---
+// --- Fetch student's latest active request ---
 $stmt = $pdo->prepare("
     SELECT id, department, queueing_num, serving_position, status, created_at
     FROM requests
@@ -88,7 +119,7 @@ $stmt->execute([
 ]);
 $request = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// initialize
+// Initialize queue variables
 $queue_num = null;
 $request_status = null;
 $serving_position = null;
@@ -96,16 +127,16 @@ $position_in_line = null;
 $estimated_time = null;
 $student_department = null;
 $currently_serving = null;
-$is_your_turn = false;      // <-- final guard: true only if the currently serving row matches you
-$display_status = null;     // <-- status used by the UI
+$is_your_turn = false;
+$display_status = null;
 
 if ($request && !empty($request['queueing_num'])) {
     $queue_num = (int)$request['queueing_num'];
     $request_status = $request['status'];
     $student_department = $request['department'];
-    $display_status = $request_status; // default
+    $display_status = $request_status;
 
-    // --- Get the department's currently serving row (include r.id so we can compare) ---
+    // Get currently serving student in department
     $stmt3 = $pdo->prepare("
         SELECT 
             r.id,
@@ -124,35 +155,30 @@ if ($request && !empty($request['queueing_num'])) {
     $stmt3->execute([':dept' => $student_department]);
     $currently_serving = $stmt3->fetch(PDO::FETCH_ASSOC);
 
-    // --- Decide if it's actually YOUR turn ---
+    // Check if it's your turn
     if ($request_status === 'Serving' && !empty($currently_serving)) {
-        // match by queueing number OR by request id (both robust)
         if (((int)$currently_serving['queueing_num'] === $queue_num) ||
-            (isset($request['id']) && (int)$currently_serving['id'] === (int)$request['id'])) {
+            ((int)$currently_serving['id'] === (int)$request['id'])) {
             $is_your_turn = true;
             $display_status = 'Serving';
         } else {
-            // someone else is marked serving — do NOT tell this student to proceed
             $is_your_turn = false;
-            // fallback: treat this student's status for display as "In Queue Now" (or keep DB value but avoid 'Serving' UI)
             $display_status = 'In Queue Now';
         }
     }
 
-    // --- If not directly being served, compute position/estimate only for real queued statuses ---
+    // Calculate position and estimated time
     if ($is_your_turn) {
         $position_in_line = 0;
         $serving_position = (int)($currently_serving['serving_position'] ?? 1);
         $estimated_time = "00:00:00";
     } else {
         if ($request_status === 'Pending') {
-            // not in queue yet
             $position_in_line = null;
             $serving_position = null;
             $estimated_time = null;
             $display_status = 'Pending';
         } else {
-            // calculate how many are ahead (exclude Pending and exclude Serving)
             if (!empty($request['serving_position'])) {
                 $serving_position = (int)$request['serving_position'];
                 $position_in_line = max(0, $serving_position - 1);
@@ -173,14 +199,14 @@ if ($request && !empty($request['queueing_num'])) {
                 $serving_position = $ahead + 1;
             }
 
-            $estimated_minutes = $position_in_line * 5; // change per your SLA
+            $estimated_minutes = $position_in_line * 5;
             $estimated_time    = gmdate("H:i:s", $estimated_minutes * 60);
-            // display_status already set to $request_status (In Queue Now / Processing / To Be Claimed)
         }
     }
 } else {
     $display_status = 'None';
 }
+
 
 ?>
 
@@ -201,6 +227,33 @@ if ($request && !empty($request['queueing_num'])) {
     <title>OLFU Queueing System</title>
 </head>
 <body>
+   <?php if (!empty($show_new_student_modal)): ?>
+<div id="newStudentModal" style="position: fixed; top:0; left:0; width:100%; height:100%; 
+     background: rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:9999;">
+    <div style="background:#fff; padding:30px; border-radius:12px; max-width:400px; width:90%; text-align:center; 
+                box-shadow:0 8px 20px rgba(0,0,0,0.3); font-family:sans-serif;">
+        <h2 style="font-size:1.75rem; font-weight:bold; color:#333; margin-bottom:12px;">
+            Welcome, <?= htmlspecialchars($user['first_name']) ?>!
+        </h2>
+        <p style="color:#555; font-size:1rem; margin-bottom:10px;">
+            Your student number has been generated:
+        </p>
+        <h3 style="color:#008C45; font-size:1.25rem; font-weight:600; margin-bottom:18px;">
+            <?= htmlspecialchars($user['student_num']) ?>
+        </h3>
+        <button onclick="document.getElementById('newStudentModal').style.display='none'" 
+                style="padding:10px 25px; background:#008C45; color:#fff; border:none; border-radius:8px; 
+                       cursor:pointer; font-weight:500; transition: background 0.2s;"
+                onmouseover="this.style.background='#006837';"
+                onmouseout="this.style.background='#008C45';">
+            OK
+        </button>
+    </div>
+</div>
+<?php endif; ?>
+
+
+
      <!-- Background Music -->
     <audio id="loginMusic" autoplay loop hidden>
     <source src="assets/risetothetop.mp3" type="audio/mpeg">
@@ -412,7 +465,8 @@ setInterval(updateRegistrarStatus, 60000);
                     <input type="text" name="first_name" value="<?php echo htmlspecialchars($first_name); ?>" readonly>
 
                     <label>Student Number:</label>
-                    <input type="text" name="student_number">
+                    <input type="text" name="student_number" value="<?php echo htmlspecialchars($student_num); ?>" readonly>
+
 
                     <label>Last School Year Attended:</label>
                     <select name="last_school_year">
@@ -456,32 +510,35 @@ setInterval(updateRegistrarStatus, 60000);
 
             <h3>Documents for Request</h3>
 <div class="document-columns">
-    <div class="document-left">
-        <?php foreach (array_slice($documents, 0, ceil(count($documents)/2)) as $doc): ?>
-            <?php 
-                $days = (int)$doc['processing_days']; 
-                $claim_date = date('F j, Y', strtotime("+$days days"));
-            ?>
-            <label class="doc-checkbox" title="Processing: <?= $days; ?> day(s) • Claim on <?= $claim_date; ?>">
-                <input type="checkbox" name="documents[]" value="<?= htmlspecialchars($doc['name']); ?>">
-                <span><?= htmlspecialchars($doc['name']); ?> (<?= $days; ?>d)</span>
-            </label>
-        <?php endforeach; ?>
-    </div>
+    <?php
+    // Split documents into two halves for left and right columns
+    $half = ceil(count($documents) / 2);
+    $columns = [
+        array_slice($documents, 0, $half),       // Left
+        array_slice($documents, $half)           // Right
+    ];
+    ?>
 
-    <div class="document-right">
-        <?php foreach (array_slice($documents, ceil(count($documents)/2)) as $doc): ?>
-            <?php 
+    <?php foreach ($columns as $index => $docs): ?>
+        <div class="document-<?php echo $index === 0 ? 'left' : 'right'; ?>">
+            <?php foreach ($docs as $doc): 
                 $days = (int)$doc['processing_days']; 
                 $claim_date = date('F j, Y', strtotime("+$days days"));
             ?>
-            <label class="doc-checkbox" title="Processing: <?= $days; ?> day(s) • Claim on <?= $claim_date; ?>">
-                <input type="checkbox" name="documents[]" value="<?= htmlspecialchars($doc['name']); ?>">
-                <span><?= htmlspecialchars($doc['name']); ?> (<?= $days; ?>d)</span>
-            </label>
-        <?php endforeach; ?>
-    </div>
+                <label class="doc-checkbox" title="Processing: <?= $days; ?> day(s) • Claim on <?= $claim_date; ?>">
+                    <input type="checkbox"
+                           name="documents[]"
+                           value="<?= htmlspecialchars($doc['name']); ?>"
+                           data-name="<?= htmlspecialchars($doc['name']); ?>"
+                           data-fee="<?= htmlspecialchars($doc['fee'] ?? 0); ?>"
+                           data-days="<?= $days; ?>">
+                    <span><?= htmlspecialchars($doc['name']); ?> (<?= $days; ?>d)</span>
+                </label>
+            <?php endforeach; ?>
+        </div>
+    <?php endforeach; ?>
 </div>
+
 
             <!-- ✅ File Upload -->
                 <div class="upload-section">
@@ -526,15 +583,34 @@ setInterval(updateRegistrarStatus, 60000);
 </div>
 
 
-<!---------- MY REQUESTS ---------->
 <?php if (isset($_SESSION['flash_message'])): ?>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            alert("<?= addslashes($_SESSION['flash_message']['text']); ?>");
-        });
-    </script>
-    <?php unset($_SESSION['flash_message']); ?>
+<div id="flashModal" style="position: fixed; top:0; left:0; width:100%; height:100%;
+     background: rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; 
+     z-index:9999; font-family:sans-serif;">
+    <div style="background:#fff; padding:30px; border-radius:12px; max-width:400px; width:90%; text-align:center;
+                box-shadow:0 8px 20px rgba(0,0,0,0.3); animation: fadeIn 0.3s ease;">
+        <h2 style="font-size:1.5rem; font-weight:bold; color:#333; margin-bottom:12px;">Notification</h2>
+        <p style="color:#555; font-size:1rem; margin-bottom:18px;">
+            <?= htmlspecialchars($_SESSION['flash_message']['text']); ?>
+        </p>
+        <button onclick="document.getElementById('flashModal').remove()" 
+                style="padding:10px 25px; background:#008C45; color:#fff; border:none; border-radius:8px; 
+                       cursor:pointer; font-weight:500; transition: background 0.2s;"
+                onmouseover="this.style.background='#006837';"
+                onmouseout="this.style.background='#008C45';">
+            OK
+        </button>
+    </div>
+</div>
+<style>
+@keyframes fadeIn {
+    from {opacity: 0; transform: scale(0.95);}
+    to {opacity: 1; transform: scale(1);}
+}
+</style>
+<?php unset($_SESSION['flash_message']); ?>
 <?php endif; ?>
+
 
 <section class="section" id="my-requests">
     <div class="top-header">
@@ -777,5 +853,121 @@ setInterval(updateRegistrarStatus, 60000);
 <script src="https://unpkg.com/scrollreveal"></script>
 <!---------- MAIN JS ----------> 
 <script src="user_dashboard.js"></script>
+<!-- ✅ Document Info Modal & Total Fee -->
+<script>
+const infoModal = document.createElement("div");
+infoModal.id = "docInfoModal";
+infoModal.innerHTML = `
+  <div class="modal-overlay"></div>
+  <div class="modal-window">
+    <h3 id="docTitle" class="doc-title">Document Info</h3>
+    <div class="doc-details">
+      <p id="docNote" class="doc-line"></p>
+      <p id="docFee" class="doc-line"></p>
+      <p id="docLost" class="doc-line lost-note"></p>
+    </div>
+    <button id="closeDocModal">OK</button>
+  </div>`;
+document.body.appendChild(infoModal);
+
+const style = document.createElement("style");
+style.innerHTML = `
+  #docInfoModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+    font-family: 'Segoe UI', sans-serif;
+  }
+  .modal-window {
+    background: #fff;
+    padding: 25px 30px 20px;
+    border-radius: 12px;
+    max-width: 420px;
+    width: 90%;
+    text-align: left;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    line-height: 1.6;
+  }
+  .doc-title {
+    font-size: 1.3rem;
+    margin-bottom: 12px;
+    color: #222;
+  }
+  .doc-details p {
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: #f9f9f9;
+    border-radius: 6px;
+  }
+  .doc-line {
+    font-size: 0.95rem;
+  }
+  .lost-note {
+    background: #fff8e5;
+    border-left: 4px solid #ffcc00;
+    color: #7a5b00;
+    font-size: 0.9rem;
+  }
+  .modal-window button {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    float: right;
+    margin-top: 10px;
+    font-weight: 500;
+  }
+  .modal-window button:hover {
+    background: #45a049;
+  }
+`;
+document.head.appendChild(style);
+
+let totalFee = 0;
+
+document.querySelectorAll('input[name="documents[]"]').forEach(box => {
+  box.addEventListener('change', () => {
+    const doc = box.dataset.name;
+    const fee = parseFloat(box.dataset.fee);
+    const days = box.dataset.days || "1";
+
+    if (box.checked) {
+      totalFee += fee;
+
+      document.getElementById("docTitle").textContent = doc;
+      document.getElementById("docNote").innerHTML = `🕓 <b>Processing time:</b> ${days} day(s)`;
+
+      if (fee && fee > 0) {
+        document.getElementById("docFee").innerHTML = `💰 <b>Fee:</b> ₱${fee.toFixed(2)} — must be paid before request.`;
+      } else {
+        document.getElementById("docFee").innerHTML = `✅ <b>Can be requested</b> without paying any fee.`;
+      }
+
+      document.getElementById("docLost").innerHTML =
+        `⚠️ <b>Note:</b> If this document was previously issued and is now lost, 
+        an <b>Affidavit of Law</b> is required for re-request.`;
+
+      infoModal.style.display = "flex";
+    } else {
+      totalFee -= fee;
+    }
+
+    document.getElementById("total-fee").textContent = `Total Fee: ₱${totalFee.toFixed(2)}`;
+  });
+});
+
+document.addEventListener("click", e => {
+  if (e.target.id === "closeDocModal" || e.target.classList.contains("modal-overlay")) {
+    infoModal.style.display = "none";
+  }
+});
+</script>
+
 </body>
 </html>

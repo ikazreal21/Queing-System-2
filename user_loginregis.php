@@ -2,9 +2,10 @@
 session_start();
 date_default_timezone_set('Asia/Manila'); // Ensure consistent timezone
 
-$servername = "localhost";
-$username = "root";
-$password = "";
+// $servername = "localhost";
+$servername = "192.168.3.5";
+$username = "cbadmin";
+$password = "%rga8477#KC86&";
 $dbname = "queue";
 
 // Display errors
@@ -13,26 +14,108 @@ error_reporting(E_ALL);
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
+if ($conn->connect_error)
+    die("Connection failed: " . $conn->connect_error);
 
 // Include PHPMailer
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 require 'vendor/autoload.php';
 
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["login"])) {
+    $email = $_POST['email'];
+    $password = $_POST['password'];
+
+    $stmt = $conn->prepare("SELECT * FROM users WHERE email = ? OR student_num = ?");
+    $stmt->bind_param("ss", $email, $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $user = $result->fetch_assoc();
+
+    if ($user && password_verify($password, $user['password'])) {
+        $_SESSION['user_email'] = $user['email'];
+        $_SESSION['stud_num'] = $user['student_num'];
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['role'] = $user['role'];
+
+        if ($user['role'] === 'admin') {
+            header("Location: admin_dashboard.php");
+        } elseif ($user['role'] === 'staff') {
+            header("Location: staff_dashboard.php");
+        } else {
+            header("Location: user_dashboard.php");
+        }
+        exit;
+    } else {
+        echo "<script>alert('Invalid email/student number or password.');</script>";
+    }
+    $stmt->close();
+}
+
 // ===================== REGISTRATION =====================
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["register"])) {
     $first_name = $_POST['first_name'];
     $last_name = $_POST['last_name'];
     $email = $_POST['email'];
-    $password = password_hash($_POST['password'], PASSWORD_BCRYPT); 
+    $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
     $role = "user";
 
-    $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password, role) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssss", $first_name, $last_name, $email, $password, $role);
+    // New student-related fields (now also in users table)
+    $section = $_POST['section'] ?? null;
+    $department = $_POST['department'] ?? null;
+    $strands = $_POST['strands'] ?? null;
+    $college = isset($_POST['college']) ? 1 : 0;
+    $shs = isset($_POST['shs']) ? 1 : 0;
+    $alumni = isset($_POST['alumni']) ? 1 : 0;
+    $graduating = isset($_POST['graduating']) ? 1 : 0;
+    $new_student = 1; // Default all new users as new students
+
+    // Insert into users with new columns
+    $stmt = $conn->prepare("
+        INSERT INTO users 
+        (first_name, last_name, email, password, role, section, department, strands, college, shs, alumni, graduating, new_student)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+    $stmt->bind_param(
+        "ssssssssiiiii",
+        $first_name,
+        $last_name,
+        $email,
+        $password,
+        $role,
+        $section,
+        $department,
+        $strands,
+        $college,
+        $shs,
+        $alumni,
+        $graduating,
+        $new_student
+    );
 
     if ($stmt->execute()) {
-        echo "<script>alert('Registration successful!'); window.location.href='user_loginregis.php';</script>";
+        $user_id = $conn->insert_id;
+
+        // Generate student number
+        $prefix = "0322000";
+        $result = $conn->query("SELECT student_num FROM users WHERE student_num IS NOT NULL ORDER BY id DESC LIMIT 1");
+
+        if ($result && $result->num_rows > 0) {
+            $last_row = $result->fetch_assoc();
+            $last_num = intval(substr($last_row['student_num'], -4));
+            $new_num = str_pad($last_num + 1, 4, "0", STR_PAD_LEFT);
+        } else {
+            $new_num = "8701";
+        }
+        $student_num = $prefix . $new_num;
+
+        // Update users table with student number
+        $stmt2 = $conn->prepare("UPDATE users SET student_num = ? WHERE id = ?");
+        $stmt2->bind_param("si", $student_num, $user_id);
+        $stmt2->execute();
+        $stmt2->close();
+
+        echo "<script>alert('Registration successful!\\nYour Student Number: $student_num'); window.location.href='user_loginregis.php';</script>";
     } else {
         echo "<script>alert('Error: " . $stmt->error . "');</script>";
     }
@@ -119,7 +202,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["action"])) {
                 $mail->addAddress($email);
                 $mail->isHTML(true);
                 $mail->Subject = 'Password Reset Code';
-                $mail->Body    = 'Your password reset code is: <strong>' . $reset_code . '</strong>';
+                $mail->Body = 'Your password reset code is: <strong>' . $reset_code . '</strong>';
                 $mail->send();
 
                 echo json_encode(['success' => true, 'message' => 'Reset code sent. Check your email.']);
@@ -135,7 +218,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["action"])) {
     // ---------------- VERIFY CODE ----------------
     if ($action === 'verify_code') {
         $email = $_POST['email'];
-        $code = (int)$_POST['code'];
+        $code = (int) $_POST['code'];
 
         $stmt = $conn->prepare("
             SELECT prc.user_id 
@@ -219,67 +302,72 @@ $conn->close();
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="user_loginregis.css">
-<title>User Login/Register</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="user_loginregis.css">
+    <title>User Login/Register</title>
 </head>
+
 <body>
 
-<div class="hero">
-    <div class="title">
-        <h1>OUR LADY OF FATIMA ANTIPOLO REGISTRAR</h1>
-        <p>Queueing Management System</p>
-    </div>
-
-    <div class="form-box">
-        <div class="button-box">
-            <div id="btn"></div>
-            <button type="button" class="toggle-btn" onclick="login()">Login</button>
-            <button type="button" class="toggle-btn" onclick="register()">Register</button>
+    <div class="hero">
+        <div class="title">
+            <h1>OUR LADY OF FATIMA ANTIPOLO REGISTRAR</h1>
+            <p>Queueing Management System</p>
         </div>
 
-        <!-- Login Form -->
-        <form id="login" class="input-group" method="POST">
-            <input type="text" class="input-field" name="email" placeholder="Email" required>
-            <input type="password" class="input-field" name="password" placeholder="Password" required>
-            <input type="checkbox" class="check-box"><span>Remember Password</span>
-            <a href="#" id="forgot-password-link">Forgot Password?</a>
-            <button type="submit" class="submit-btn" name="login">Login</button>
-        </form>
+        <div class="form-box">
+            <div class="button-box">
+                <div id="btn"></div>
+                <button type="button" class="toggle-btn" onclick="login()">Login</button>
+                <button type="button" class="toggle-btn" onclick="register()">Register</button>
+            </div>
 
-        <!-- Forgot Password Form -->
-        <form id="forgot-password-form" class="input-group" style="display:none;">
-            <input type="email" id="forgot-email" class="input-field" placeholder="Enter your email" required>
-            <button type="button" id="send-reset-code" class="submit-btn">Send Reset Code</button>
-            <div class="verify-container" style="display:none;" id="verify-container">
-    <input type="text" id="verification-code" class="verification-input" placeholder="Enter code">
-    <button type="button" id="verify-code-btn" class="verify-btn">Verify Code</button>
-</div>
-            <div class="reset-container" id="reset-container" style="display:none;">
-    <input type="password" id="new-password" class="fp-new-password" placeholder="Enter new password" required>
-    <input type="password" id="confirm-password" class="fp-confirm-password" placeholder="Confirm new password" required>
-    <button type="button" id="reset-password-btn" class="fp-reset-btn">Reset Password</button>
-</div>
+            <!-- Login Form -->
+            <form id="login" class="input-group" method="POST">
+                <input type="text" class="input-field" name="email" placeholder="Student Number or Email" required>
+                <input type="password" class="input-field" name="password" placeholder="Password" required>
+                <input type="checkbox" class="check-box"><span>Remember Password</span>
+                <a href="#" id="forgot-password-link">Forgot Password?</a>
+                <button type="submit" class="submit-btn" name="login">Login</button>
+            </form>
 
-            <button type="button" id="back-btn" class="back-btn">Back</button>
-        </form>
+            <!-- Forgot Password Form -->
+            <form id="forgot-password-form" class="input-group" style="display:none;">
+                <input type="email" id="forgot-email" class="input-field" placeholder="Enter your email" required>
+                <button type="button" id="send-reset-code" class="submit-btn">Send Reset Code</button>
+                <div class="verify-container" style="display:none;" id="verify-container">
+                    <input type="text" id="verification-code" class="verification-input" placeholder="Enter code">
+                    <button type="button" id="verify-code-btn" class="verify-btn">Verify Code</button>
+                </div>
+                <div class="reset-container" id="reset-container" style="display:none;">
+                    <input type="password" id="new-password" class="fp-new-password" placeholder="Enter new password"
+                        required>
+                    <input type="password" id="confirm-password" class="fp-confirm-password"
+                        placeholder="Confirm new password" required>
+                    <button type="button" id="reset-password-btn" class="fp-reset-btn">Reset Password</button>
+                </div>
 
-        <!-- Registration Form -->
-        <form id="register" class="input-group" method="POST">
-            <input type="text" class="input-field" name="first_name" placeholder="First Name" required>
-            <input type="text" class="input-field" name="last_name" placeholder="Last Name" required>
-            <input type="email" class="input-field" name="email" placeholder="Email" required>
-            <input type="password" class="input-field" name="password" placeholder="Password" required>
-            <input type="checkbox" class="check-box" required><span>I agree to the</span>
-            <a href="#" id="terms">terms & conditions</a>
-            <button type="submit" class="submit-btn" name="register">Register</button>
-        </form>
+                <button type="button" id="back-btn" class="back-btn">Back</button>
+            </form>
+
+            <!-- Registration Form -->
+            <form id="register" class="input-group" method="POST">
+                <input type="text" class="input-field" name="first_name" placeholder="First Name" required>
+                <input type="text" class="input-field" name="last_name" placeholder="Last Name" required>
+                <input type="email" class="input-field" name="email" placeholder="Email" required>
+                <input type="password" class="input-field" name="password" placeholder="Password" required>
+                <input type="checkbox" class="check-box" required><span>I agree to the</span>
+                <a href="#" id="terms">terms & conditions</a>
+                <button type="submit" class="submit-btn" name="register">Register</button>
+            </form>
+        </div>
+        <button type="button" class="back-btn" onclick="window.location.href='index.php';">Back</button>
     </div>
-    <button type="button" class="back-btn" onclick="window.location.href='index.php';">Back</button>
-</div>
 
-<script src="user_loginregis.js"></script>
+    <script src="user_loginregis.js"></script>
 </body>
+
 </html>

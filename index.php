@@ -128,11 +128,6 @@
             <label>Request official student documents such as transcripts, certificates, and diplomas.</label>
         </div>
         <div class="service-box">
-            <i class="uil uil-users-alt"></i>
-            <h3>Enrollment Services</h3>
-            <label>Assistance with registration, subject adjustments, and cross-enrollment processing.</label>
-        </div>
-        <div class="service-box">
             <i class="uil uil-award"></i>
             <h3>Student Records Processing</h3>
             <label>Manage student records, verify academic status, and update personal information.</label>

@@ -6,6 +6,27 @@
     box-sizing: border-box;
 }
 
+.flash-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #008C45;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 9999;
+}
+.flash-message.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.flash-message.error {
+  background: #c0392b;
+}
+
 body {
     background: #f1f1f1;
     margin: 0;

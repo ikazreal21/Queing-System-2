@@ -79,12 +79,37 @@ if (isset($_GET['delete_department'])) {
     exit();
 }
 
+// Handle Add Strand
+if (isset($_POST['add_strand'])) {
+    $stra_name = trim($_POST['strand_name']);
+    if (!empty($stra_name)) {
+        $stmt = $pdo->prepare("INSERT INTO strands (name) VALUES (?)");
+        $stmt->execute([$stra_name]);
+    }
+    header("Location: admin_documents.php");
+    exit();
+}
+
+// Handle Delete Strand
+if (isset($_GET['delete_strands'])) {
+    $stra_id = (int) $_GET['delete_strands'];
+    $stmt = $pdo->prepare("DELETE FROM strands WHERE id = ?");
+    $stmt->execute([$stra_id]);
+    header("Location: admin_documents.php");
+    exit();
+}
+
+// Fetch strands
+$strands = $pdo->query(query:"SELECT * FROM strands ORDER BY name ASC")->fetchAll(mode: PDO::FETCH_ASSOC);
+
 // Fetch departments
 $departments = $pdo->query("SELECT * FROM departments ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch documents
 $documents = $pdo->query("SELECT * FROM documents ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -164,7 +189,10 @@ $documents = $pdo->query("SELECT * FROM documents ORDER BY name ASC")->fetchAll(
         <form method="POST">
             <input type="text" name="department_name" placeholder="Enter Department Name" required>
             <button type="submit" name="add_department">Add Department</button>
+            
         </form>
+
+        
 
         <ul>
             <?php foreach ($departments as $dept): ?>
@@ -174,7 +202,24 @@ $documents = $pdo->query("SELECT * FROM documents ORDER BY name ASC")->fetchAll(
                 </li>
             <?php endforeach; ?>
         </ul>
-    </main>
+
+        
+         <!-- Strand Section -->
+        <h2>Strands</h2>
+        <form method="POST">
+            <input type="text" name="strand_name" placeholder="Enter Strand Name" required>
+            <button type="submit" name="add_strand">Add Strand</button>
+            
+        </form>
+        
+        <ul>
+            <?php foreach ($strands as $str): ?>
+                <li>
+                    <?= htmlspecialchars($str['name']); ?>
+                    <a href="admin_documents.php?delete_strands=<?= $str['id']; ?>" onclick="return confirm('Delete this strand?');">❌</a>
+                </li>
+            <?php endforeach; ?>
+        </ul>
     
     <script src="admin_dashboard.js"></script>
 </body>

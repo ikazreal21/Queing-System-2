@@ -112,7 +112,7 @@ $completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 </nav>
 
-<div class="container">
+<div class="container" data-department="<?php echo htmlspecialchars($staff_departments[0] ?? 0); ?>">
     <!-- Queueing Column -->
     <div class="column" id="queueing-column">
         <h2>Queueing</h2>
@@ -179,5 +179,9 @@ $completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <script src="now_serving.js"></script>
+<script>
+  setInterval(() => location.reload(), 1500); // reload every 1.5 seconds
+</script>
+
 </body>
 </html>

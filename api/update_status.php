@@ -9,7 +9,7 @@ try {
     $served_by = trim($_POST['served_by'] ?? ''); // optional
 
     if (!$id || !$status) {
-        echo json_encode(['status' => 'error', 'message' => 'Missing parameters.']);
+        echo json_encode(['success' => false, 'message' => 'Missing parameters.']);
         exit;
     }
 
@@ -28,8 +28,8 @@ try {
         'id'        => $id
     ]);
 
-    echo json_encode(['status' => 'success', 'message' => 'Queue updated successfully.']);
+    echo json_encode(['success' => true, 'message' => 'Queue updated successfully.']);
 
 } catch (PDOException $e) {
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }

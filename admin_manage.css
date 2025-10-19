@@ -23,6 +23,16 @@
     --tran-04: all 0.4s ease;
     --tran-05: all 0.5s ease;
 }
+/* Make the departments checkbox container scrollable */
+#departmentsCheckboxes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 15px;
+  margin-top: 8px;
+  max-height: 200px;  /* set max height */
+  overflow-y: auto;   /* enable vertical scrolling */
+  padding-right: 5px; /* optional, for scrollbar space */
+}
 
 body {
     height: 100vh;

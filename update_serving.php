@@ -8,7 +8,6 @@ header('Content-Type: application/json');
 $input = json_decode(file_get_contents('php://input'), true);
 $action = $input['action'] ?? null;
 $request_id = $input['request_id'] ?? null;
-$queueing_num = $input['queueing_num'] ?? null; // optional queue number
 
 if (!$action || !$request_id) {
     echo json_encode(['success' => false, 'message' => 'Invalid input']);
@@ -26,58 +25,66 @@ if (!$request) {
 }
 
 try {
-    switch ($action) {
-        case 'serve':
-    // Allow both 'To Be Claimed' and 'In Queue Now'
-    if (!in_array($request['status'], ['To Be Claimed', 'In Queue Now'])) {
-        throw new Exception("Cannot serve: request is not in Queueing");
-    }
-
-    if (!$queueing_num) throw new Exception("Queue number required for serving");
-
-    // Current staff ID
     $staff_id = $_SESSION['user_id'];
 
-    // Check if the queue number is already assigned
-    $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM requests WHERE status='Serving' AND queueing_num=:qnum");
-    $stmtCheck->execute([':qnum' => $queueing_num]);
-    if ($stmtCheck->fetchColumn() > 0) throw new Exception("Queue number $queueing_num is already assigned!");
+    // Get the department of the current request
+    $department = $request['department'];
 
-    // Find next serving position
-    $stmtPos = $pdo->query("SELECT MAX(serving_position) as max_pos FROM requests WHERE status='Serving'");
-    $maxPos = $stmtPos->fetch(PDO::FETCH_ASSOC)['max_pos'] ?? 0;
-    $newPos = $maxPos + 1;
+    switch ($action) {
+        /* ===================== SERVE ===================== */
+        case 'serve':
+            if (!in_array($request['status'], ['To Be Claimed', 'In Queue Now'])) {
+                throw new Exception("Cannot serve: request is not in queueing state.");
+            }
 
-    // Update request to Serving and record staff
-    $stmt = $pdo->prepare("
-        UPDATE requests 
-        SET status='Serving',
-            processing_start=NOW(),
-            queueing_num=:queueing_num,
-            serving_position=:pos,
-            served_by=:staff_id,
-            updated_at=NOW()
-        WHERE id=:id
-    ");
-    $stmt->execute([
-        ':queueing_num' => $queueing_num,
-        ':pos' => $newPos,
-        ':staff_id' => $staff_id,
-        ':id' => $request_id
-    ]);
-
-    $message = 'Moved to Serving with queue number ' . $queueing_num;
-    break;
-
-
-
-        case 'back':
-            if ($request['status'] !== 'Serving') throw new Exception("Cannot move back: not in Serving");
-
-            // Move back and reset queue number
+            // Move this request to Serving
             $stmt = $pdo->prepare("
                 UPDATE requests
-                SET status='To Be Claimed',
+                SET status='Serving',
+                    processing_start=NOW(),
+                    served_by=:staff_id,
+                    updated_at=NOW()
+                WHERE id=:id
+            ");
+            $stmt->execute([
+                ':staff_id' => $staff_id,
+                ':id' => $request_id
+            ]);
+
+            // Reorder only within the same department and non-walk-ins
+            $stmtReorder = $pdo->prepare("
+                SELECT id FROM requests
+                WHERE status='Serving'
+                  AND department = :department
+                  AND walk_in = 0
+                ORDER BY processing_start ASC, id ASC
+            ");
+            $stmtReorder->execute([':department' => $department]);
+
+            $i = 1;
+            while ($row = $stmtReorder->fetch(PDO::FETCH_ASSOC)) {
+                $updatePos = $pdo->prepare("
+                    UPDATE requests
+                    SET queueing_num=:q, serving_position=:q
+                    WHERE id=:id
+                ");
+                $updatePos->execute([':q' => $i, ':id' => $row['id']]);
+                $i++;
+            }
+
+            $message = "Moved to Serving";
+            break;
+
+        /* ===================== BACK ===================== */
+        case 'back':
+            if ($request['status'] !== 'Serving') {
+                throw new Exception("Cannot move back: not in Serving");
+            }
+
+            // Move back to queue
+            $stmt = $pdo->prepare("
+                UPDATE requests
+                SET status='In Queue Now',
                     processing_start=NULL,
                     serving_position=NULL,
                     queueing_num=0,
@@ -86,22 +93,37 @@ try {
             ");
             $stmt->execute([':id' => $request_id]);
 
-            // Reorder remaining Serving positions
-            $stmtReorder = $pdo->query("SELECT id FROM requests WHERE status='Serving' ORDER BY serving_position ASC");
+            // Reorder remaining Serving requests (same department only)
+            $stmtReorder = $pdo->prepare("
+                SELECT id FROM requests
+                WHERE status='Serving'
+                  AND department = :department
+                  AND walk_in = 0
+                ORDER BY processing_start ASC, id ASC
+            ");
+            $stmtReorder->execute([':department' => $department]);
+
             $i = 1;
             while ($row = $stmtReorder->fetch(PDO::FETCH_ASSOC)) {
-                $updatePos = $pdo->prepare("UPDATE requests SET serving_position=:pos WHERE id=:id");
-                $updatePos->execute([':pos' => $i, ':id' => $row['id']]);
+                $updatePos = $pdo->prepare("
+                    UPDATE requests
+                    SET queueing_num=:q, serving_position=:q
+                    WHERE id=:id
+                ");
+                $updatePos->execute([':q' => $i, ':id' => $row['id']]);
                 $i++;
             }
 
-            $message = 'Moved back to Queueing and queue number reset';
+            $message = "Moved back to queue";
             break;
 
+        /* ===================== COMPLETE ===================== */
         case 'complete':
-            if ($request['status'] !== 'Serving') throw new Exception("Cannot complete: not in Serving");
+            if ($request['status'] !== 'Serving') {
+                throw new Exception("Cannot complete: not in Serving");
+            }
 
-            // Complete request and reset queue number
+            // Mark as completed
             $stmt = $pdo->prepare("
                 UPDATE requests
                 SET status='Completed',
@@ -114,16 +136,28 @@ try {
             ");
             $stmt->execute([':id' => $request_id]);
 
-            // Reorder remaining Serving positions
-            $stmtReorder = $pdo->query("SELECT id FROM requests WHERE status='Serving' ORDER BY serving_position ASC");
+            // Reorder remaining Serving requests (same department only)
+            $stmtReorder = $pdo->prepare("
+                SELECT id FROM requests
+                WHERE status='Serving'
+                  AND department = :department
+                  AND walk_in = 0
+                ORDER BY processing_start ASC, id ASC
+            ");
+            $stmtReorder->execute([':department' => $department]);
+
             $i = 1;
             while ($row = $stmtReorder->fetch(PDO::FETCH_ASSOC)) {
-                $updatePos = $pdo->prepare("UPDATE requests SET serving_position=:pos WHERE id=:id");
-                $updatePos->execute([':pos' => $i, ':id' => $row['id']]);
+                $updatePos = $pdo->prepare("
+                    UPDATE requests
+                    SET queueing_num=:q, serving_position=:q
+                    WHERE id=:id
+                ");
+                $updatePos->execute([':q' => $i, ':id' => $row['id']]);
                 $i++;
             }
 
-            $message = 'Marked as Completed and queue number reset';
+            $message = "Marked as Completed";
             break;
 
         default:

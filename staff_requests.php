@@ -95,19 +95,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const refreshInterval = 5000; // 5 seconds
     const walkinModal = document.getElementById("walkin-modal-unique");
     const confirmModal = document.getElementById("walkin-confirm-modal");
+    const lightboxOverlay = document.getElementById("lightboxOverlay");
+    const declineModal = document.getElementById("decline-modal"); // <- add decline modal
 
     setInterval(() => {
-        if (!walkinModal || !confirmModal) return;
+        const isWalkinOpen = walkinModal && getComputedStyle(walkinModal).display !== "none";
+        const isConfirmOpen = confirmModal && getComputedStyle(confirmModal).display !== "none";
+        const isLightboxOpen = lightboxOverlay && getComputedStyle(lightboxOverlay).display !== "none";
+        const isDeclineOpen = declineModal && getComputedStyle(declineModal).display !== "none"; // <- check decline modal
 
-        const walkinDisplay = window.getComputedStyle(walkinModal).display;
-        const confirmDisplay = window.getComputedStyle(confirmModal).display;
-
-        // Only refresh if BOTH modals are NOT visible
-        if (walkinDisplay !== "block" && confirmDisplay !== "block") {
-            // window.location.reload();
+        // Only refresh if NONE are visible
+        if (!isWalkinOpen && !isConfirmOpen && !isLightboxOpen && !isDeclineOpen) {
+            window.location.reload();
         }
     }, refreshInterval);
 });
+
 </script>
 
 <body>
@@ -279,7 +282,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td><?= htmlspecialchars($req['documents']) ?></td>
                     <td>
                         <?php if ($req['attachment']): ?>
-                            <button class="action-btn view-btn" data-attachment="<?= $req['attachment'] ?>">View</button>
+                            <button class="action-btn view-btn" data-attachment="<?= htmlspecialchars($req['attachment']) ?>">View</button>
                         <?php else: ?>
                             No attachment
                         <?php endif; ?>
@@ -498,6 +501,28 @@ document.addEventListener("DOMContentLoaded", () => {
     </div>
 </div>
 
+<!-- Confirmation Modal -->
+<div id="confirmModalOverlay" class="modal-overlay">
+  <div class="modal">
+    <h2>Confirm Action</h2>
+    <p id="confirmModalMessage">Are you sure?</p>
+    <div class="modal-buttons">
+      <button class="btn-no" id="confirmModalCancel">X</button>
+      <button class="btn-yes" id="confirmModalYes">Check</button>
+    </div>
+  </div>
+</div>
+<!-- Decline Modal -->
+<div id="decline-modal" class="custom-modal">
+  <div class="custom-modal-content">
+    <h3>Reason for Declining</h3>
+    <textarea id="decline-reason" placeholder="Enter reason..." rows="4"></textarea>
+    <div class="modal-buttons">
+      <button id="decline-submit">Submit</button>
+      <button id="decline-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

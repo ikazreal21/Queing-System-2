@@ -342,6 +342,7 @@ if (isset($_POST['updateStaff'])) {
 .modal-content {
   background: #fff;
   margin: 8% auto;
+  margin-bottom: 700px;
   padding: 25px 30px;
   width: 450px;
   border-radius: 12px;
