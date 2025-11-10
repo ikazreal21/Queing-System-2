@@ -2,10 +2,9 @@
 session_start();
 date_default_timezone_set('Asia/Manila'); // Ensure consistent timezone
 
-// $servername = "localhost";
-$servername = "192.168.3.5";
-$username = "cbadmin";
-$password = "%rga8477#KC86&";
+$servername = "localhost";
+$username = "root";
+$password = "";
 $dbname = "queue";
 
 // Display errors

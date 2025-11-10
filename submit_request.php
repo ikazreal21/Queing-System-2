@@ -1,11 +1,9 @@
 <?php
 session_start();
 require "db.php"; // your PDO connection ($pdo)
-require "cloudinary_helper.php"; // Cloudinary helper class
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     try {
-
         // Sanitize inputs
         $first_name       = $_POST['first_name'] ?? '';
         $last_name        = $_POST['last_name'] ?? '';
@@ -17,41 +15,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $documents        = isset($_POST['documents']) ? implode(", ", $_POST['documents']) : '';
         $notes            = $_POST['notes'] ?? '';
 
-        // Handle multiple file uploads using Cloudinary
+        // Handle multiple file uploads
         $attachments = [];
         $status = "Declined"; // default if no attachment
 
-        if (!empty($_FILES['attachment'])) {
-
-            $cloudinary = new CloudinaryHelper();
-            $allowedTypes = ["jpg", "jpeg", "png", "pdf"];
+        if (!empty($_FILES['attachment']['name'][0])) {
+            $targetDir = "uploads/";
+            if (!is_dir($targetDir)) {
+                mkdir($targetDir, 0777, true);
+            }
 
             foreach ($_FILES['attachment']['name'] as $key => $name) {
                 $fileTmp  = $_FILES['attachment']['tmp_name'][$key];
                 $fileType = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-                $fileSize = $_FILES['attachment']['size'][$key];
+                $allowedTypes = ["jpg", "jpeg", "png", "pdf"];
 
-                // Validate file type
-                if (!in_array($fileType, $allowedTypes)) {
-                    continue; // Skip invalid file types
-                }
+                if (in_array($fileType, $allowedTypes)) {
+                    $fileName = time() . "_" . $key . "_" . basename($name);
+                    $targetFilePath = $targetDir . $fileName;
 
-                // Validate file size (max 10MB)
-                if ($fileSize > 10 * 1024 * 1024) {
-                    continue; // Skip files larger than 10MB
-                }
-
-                // Validate uploaded file
-                if (!is_uploaded_file($fileTmp)) {
-                    continue; // Skip if not a valid uploaded file
-                }
-
-                // Upload to Cloudinary
-                $uploadResult = $cloudinary->uploadFile($fileTmp, $name);
-                if ($uploadResult['success']) {
-                    $attachments[] = $uploadResult['url']; // ✅ fix: push into array
-                } else {
-                    error_log("Failed to upload file {$name}: " . $uploadResult['error']);
+                    if (move_uploaded_file($fileTmp, $targetFilePath)) {
+                        $attachments[] = $fileName;
+                    }
                 }
             }
 
@@ -60,8 +45,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         }
 
-        // Convert attachments array to JSON string for database storage
-        $attachmentStr = !empty($attachments) ? json_encode($attachments, JSON_UNESCAPED_SLASHES) : null;
+        $attachmentStr = !empty($attachments) ? implode(", ", $attachments) : null;
 
         // 🔹 Calculate processing time + dates
         $processing_time = null;
@@ -88,19 +72,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         }
 
-        // 🔹 Only assign queue number if not Declined
-        $queueing_num = null;
-        $serving_position = null;
+        // 🔹 Calculate queue number per department
+        $stmtQueue = $pdo->prepare("SELECT MAX(queueing_num) FROM requests WHERE department = ?");
+        $stmtQueue->execute([$department]);
+        $maxQueue = $stmtQueue->fetchColumn();
+        $queueing_num = $maxQueue ? $maxQueue + 1 : 1;
 
-        if ($status !== "Declined") {
-            $stmtQueue = $pdo->prepare("SELECT MAX(queueing_num) FROM requests WHERE department = ?");
-            $stmtQueue->execute([$department]);
-            $maxQueue = $stmtQueue->fetchColumn();
-            $queueing_num = $maxQueue ? $maxQueue + 1 : 1;
-
-            // serving_position = queueing_num initially
-            $serving_position = $queueing_num;
-        }
+        // 🔹 Optional: serving_position same as queueing_num initially
+        $serving_position = $queueing_num;
 
         // Insert into DB
         $sql = "INSERT INTO requests 

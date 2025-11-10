@@ -1,44 +1,99 @@
 <?php
 session_start();
 include('db.php'); // PDO connection
-
 header('Content-Type: application/json');
 
-// Read JSON input
 $input = json_decode(file_get_contents('php://input'), true);
 $action = $input['action'] ?? null;
 $request_id = $input['request_id'] ?? null;
+$staff_id = $_SESSION['user_id'] ?? null;
 
-if (!$action || !$request_id) {
-    echo json_encode(['success' => false, 'message' => 'Invalid input']);
+if (!$staff_id) {
+    echo json_encode(['success' => false, 'message' => 'Not logged in']);
     exit;
 }
 
-// Fetch current request
-$stmt = $pdo->prepare("SELECT * FROM requests WHERE id = :id");
-$stmt->execute([':id' => $request_id]);
-$request = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$request) {
-    echo json_encode(['success' => false, 'message' => 'Request not found']);
+if (!$action) {
+    echo json_encode(['success' => false, 'message' => 'No action specified']);
     exit;
 }
 
+// -------------------- UTILITY: GET FIRST QUEUE ITEM --------------------
+function getFirstQueueItem($pdo, $department, $exclude_id = null) {
+    $sql = "
+        SELECT * FROM requests
+        WHERE status IN ('In Queue Now','To Be Claimed')
+          AND department=:department
+          AND DATE(claim_date)=CURDATE()
+          AND (call_attempts IS NULL OR call_attempts < 3)
+    ";
+    $params = [':department' => $department];
+
+    if ($exclude_id) {
+        $sql .= " AND id != :exclude_id";
+        $params[':exclude_id'] = $exclude_id;
+    }
+
+    $sql .= " ORDER BY created_at ASC LIMIT 1";
+
+    $stmtQueue = $pdo->prepare($sql);
+    $stmtQueue->execute($params);
+    return $stmtQueue->fetch(PDO::FETCH_ASSOC);
+}
+
+// -------------------- RECALCULATE QUEUEING NUMBERS --------------------
+function recalcQueueingNum($pdo, $department) {
+    // Serving items = queueing_num 1
+    $stmtServing = $pdo->prepare("SELECT id FROM requests WHERE status='Serving' AND department=:department");
+    $stmtServing->execute([':department' => $department]);
+    $servingItems = $stmtServing->fetchAll(PDO::FETCH_COLUMN);
+
+    foreach ($servingItems as $id) {
+        $stmtUpdate = $pdo->prepare("UPDATE requests SET queueing_num=1 WHERE id=:id");
+        $stmtUpdate->execute([':id' => $id]);
+    }
+
+    // Queueing items = queueing_num 2, 3, 4...
+    $stmtQueue = $pdo->prepare("
+        SELECT id FROM requests
+        WHERE status='In Queue Now'
+          AND department=:department
+        ORDER BY created_at ASC
+    ");
+    $stmtQueue->execute([':department' => $department]);
+    $queueItems = $stmtQueue->fetchAll(PDO::FETCH_COLUMN);
+
+    $queueNum = 2;
+    foreach ($queueItems as $id) {
+        $stmtUpdate = $pdo->prepare("UPDATE requests SET queueing_num=:queueing_num WHERE id=:id");
+        $stmtUpdate->execute([':queueing_num' => $queueNum, ':id' => $id]);
+        $queueNum++;
+    }
+}
+
+// -------------------- MANUAL ACTIONS --------------------
 try {
-    $staff_id = $_SESSION['user_id'];
-
-    // Get the department of the current request
-    $department = $request['department'];
-
     switch ($action) {
-        /* ===================== SERVE ===================== */
-        case 'serve':
-            if (!in_array($request['status'], ['To Be Claimed', 'In Queue Now'])) {
-                throw new Exception("Cannot serve: request is not in queueing state.");
-            }
 
-            // Move this request to Serving
-            $stmt = $pdo->prepare("
+        case 'serve':
+        case 'auto-serve':
+            // Determine department
+            $stmtDept = $pdo->prepare("SELECT department_id FROM staff_departments WHERE staff_id=:staff_id");
+            $stmtDept->execute([':staff_id' => $staff_id]);
+            $departments = $stmtDept->fetchAll(PDO::FETCH_COLUMN);
+            if (empty($departments)) throw new Exception("No departments assigned to this staff");
+            $department = $departments[0];
+
+            // Check if someone is already serving
+            $stmtServing = $pdo->prepare("SELECT id FROM requests WHERE status='Serving' AND department=:department LIMIT 1");
+            $stmtServing->execute([':department' => $department]);
+            if ($stmtServing->fetch()) throw new Exception("A request is already being served");
+
+            // Pick the first in queue
+            $firstQueue = getFirstQueueItem($pdo, $department);
+            if (!$firstQueue) throw new Exception("No queue items to serve");
+
+            $stmtUpdate = $pdo->prepare("
                 UPDATE requests
                 SET status='Serving',
                     processing_start=NOW(),
@@ -46,122 +101,116 @@ try {
                     updated_at=NOW()
                 WHERE id=:id
             ");
-            $stmt->execute([
-                ':staff_id' => $staff_id,
-                ':id' => $request_id
-            ]);
+            $stmtUpdate->execute([':staff_id' => $staff_id, ':id' => $firstQueue['id']]);
 
-            // Reorder only within the same department and non-walk-ins
-            $stmtReorder = $pdo->prepare("
-                SELECT id FROM requests
-                WHERE status='Serving'
-                  AND department = :department
-                  AND walk_in = 0
-                ORDER BY processing_start ASC, id ASC
-            ");
-            $stmtReorder->execute([':department' => $department]);
-
-            $i = 1;
-            while ($row = $stmtReorder->fetch(PDO::FETCH_ASSOC)) {
-                $updatePos = $pdo->prepare("
-                    UPDATE requests
-                    SET queueing_num=:q, serving_position=:q
-                    WHERE id=:id
-                ");
-                $updatePos->execute([':q' => $i, ':id' => $row['id']]);
-                $i++;
-            }
-
-            $message = "Moved to Serving";
+            $message = "Serving request ID {$firstQueue['id']}";
             break;
 
-        /* ===================== BACK ===================== */
         case 'back':
-            if ($request['status'] !== 'Serving') {
-                throw new Exception("Cannot move back: not in Serving");
-            }
+            if (!$request_id) throw new Exception("No request ID provided");
 
-            // Move back to queue
-            $stmt = $pdo->prepare("
-                UPDATE requests
-                SET status='In Queue Now',
-                    processing_start=NULL,
-                    serving_position=NULL,
-                    queueing_num=0,
-                    updated_at=NOW()
-                WHERE id=:id
-            ");
+            $stmt = $pdo->prepare("SELECT * FROM requests WHERE id=:id");
             $stmt->execute([':id' => $request_id]);
+            $request = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$request) throw new Exception("Request not found");
+            if ($request['status'] !== 'Serving') throw new Exception("Cannot move back: not in Serving");
 
-            // Reorder remaining Serving requests (same department only)
-            $stmtReorder = $pdo->prepare("
-                SELECT id FROM requests
-                WHERE status='Serving'
-                  AND department = :department
-                  AND walk_in = 0
-                ORDER BY processing_start ASC, id ASC
-            ");
-            $stmtReorder->execute([':department' => $department]);
+            $attempts = (int)$request['call_attempts'] + 1;
 
-            $i = 1;
-            while ($row = $stmtReorder->fetch(PDO::FETCH_ASSOC)) {
-                $updatePos = $pdo->prepare("
+            if ($attempts >= 3) {
+                // Move to To Be Claimed
+                $stmtUpdate = $pdo->prepare("
                     UPDATE requests
-                    SET queueing_num=:q, serving_position=:q
+                    SET status='To Be Claimed',
+                        call_attempts=0,
+                        processing_start=NULL,
+                        queueing_num=0,
+                        serving_position=0,
+                        updated_at=NOW()
                     WHERE id=:id
                 ");
-                $updatePos->execute([':q' => $i, ':id' => $row['id']]);
-                $i++;
+                $stmtUpdate->execute([':id' => $request_id]);
+                $backMessage = "Moved to 'To Be Claimed' (3 attempts reached)";
+            } else {
+                // Move back to In Queue Now
+                $stmtUpdate = $pdo->prepare("
+                    UPDATE requests
+                    SET status='In Queue Now',
+                        call_attempts=:attempts,
+                        processing_start=NULL,
+                        updated_at=NOW()
+                    WHERE id=:id
+                ");
+                $stmtUpdate->execute([':attempts' => $attempts, ':id' => $request_id]);
+                $backMessage = "Moved back to queue (Attempt {$attempts})";
             }
 
-            $message = "Moved back to queue";
+            // Auto-serve next in queue
+            $department = $request['department'];
+            $nextQueue = getFirstQueueItem($pdo, $department, $request_id);
+            $serveMessage = "";
+            if ($nextQueue) {
+                $stmtUpdate = $pdo->prepare("
+                    UPDATE requests
+                    SET status='Serving',
+                        processing_start=NOW(),
+                        served_by=:staff_id,
+                        updated_at=NOW()
+                    WHERE id=:id
+                ");
+                $stmtUpdate->execute([':staff_id' => $staff_id, ':id' => $nextQueue['id']]);
+                $serveMessage = "Now serving ID {$nextQueue['id']}";
+            }
+
+            $message = $backMessage;
+            if ($serveMessage) $message .= ". {$serveMessage}";
             break;
 
-        /* ===================== COMPLETE ===================== */
         case 'complete':
-            if ($request['status'] !== 'Serving') {
-                throw new Exception("Cannot complete: not in Serving");
-            }
+            if (!$request_id) throw new Exception("No request ID provided");
 
-            // Mark as completed
-            $stmt = $pdo->prepare("
+            $stmt = $pdo->prepare("SELECT * FROM requests WHERE id=:id");
+            $stmt->execute([':id' => $request_id]);
+            $request = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$request) throw new Exception("Request not found");
+            if ($request['status'] !== 'Serving') throw new Exception("Cannot complete: not in Serving");
+
+            $stmtUpdate = $pdo->prepare("
                 UPDATE requests
                 SET status='Completed',
                     approved_date=NOW(),
                     completed_date=NOW(),
-                    serving_position=NULL,
-                    queueing_num=0,
                     updated_at=NOW()
                 WHERE id=:id
             ");
-            $stmt->execute([':id' => $request_id]);
+            $stmtUpdate->execute([':id' => $request_id]);
 
-            // Reorder remaining Serving requests (same department only)
-            $stmtReorder = $pdo->prepare("
-                SELECT id FROM requests
-                WHERE status='Serving'
-                  AND department = :department
-                  AND walk_in = 0
-                ORDER BY processing_start ASC, id ASC
-            ");
-            $stmtReorder->execute([':department' => $department]);
-
-            $i = 1;
-            while ($row = $stmtReorder->fetch(PDO::FETCH_ASSOC)) {
-                $updatePos = $pdo->prepare("
+            // Auto-serve next in queue
+            $department = $request['department'];
+            $nextQueue = getFirstQueueItem($pdo, $department);
+            if ($nextQueue) {
+                $stmtUpdate = $pdo->prepare("
                     UPDATE requests
-                    SET queueing_num=:q, serving_position=:q
+                    SET status='Serving',
+                        processing_start=NOW(),
+                        served_by=:staff_id,
+                        updated_at=NOW()
                     WHERE id=:id
                 ");
-                $updatePos->execute([':q' => $i, ':id' => $row['id']]);
-                $i++;
+                $stmtUpdate->execute([':staff_id' => $staff_id, ':id' => $nextQueue['id']]);
+                $message = "Completed request ID {$request_id}. Now serving ID {$nextQueue['id']}";
+            } else {
+                $message = "Completed request ID {$request_id}. No one in queue to serve now.";
             }
-
-            $message = "Marked as Completed";
             break;
 
         default:
             throw new Exception("Unknown action");
+    }
+
+    // -------------------- RECALCULATE QUEUEING NUMBERS --------------------
+    if (isset($department)) {
+        recalcQueueingNum($pdo, $department);
     }
 
     echo json_encode(['success' => true, 'message' => $message]);
@@ -169,4 +218,3 @@ try {
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
-?>

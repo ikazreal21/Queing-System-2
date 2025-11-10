@@ -9,7 +9,7 @@ $pdo->prepare("
         processing_end = NOW(),
         approved_date = NOW(),
         updated_at = NOW()
-    WHERE status = 'Processing'
+    WHERE status = 'Processing' 
       AND scheduled_date <= NOW()
 ")->execute();
 

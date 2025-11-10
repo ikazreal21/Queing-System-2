@@ -131,41 +131,39 @@ if (isset($_POST['updateStaff'])) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="admin_manage.css">
-<link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-<title>Admin Manage Staff</title>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Admin — Documents</title>
+
+    <!-- Boxicons for small icons -->
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="admin_manage.css">
+
 </head>
 <body>
-<nav class="sidebar">
-    <header>
-        <div class="image-text">
-            <span class="image">
-                <img src="assets/fatimalogo.jpg" alt="logo">
-            </span>
-            <div class="text header-text">
-                <span class="profession">Admin Manage Staff</span>
-                <span class="name"><?php echo htmlspecialchars($user_name); ?></span>
+  <?php $currentPage = basename($_SERVER['PHP_SELF']); ?>
+
+    <nav class="sidebar">
+        <div class="brand">
+            <img src="assets/fatimalogo.jpg" alt="logo" class="brand-logo">
+            <div class="brand-text">
+                <span class="brand-title">Admin Documents</span>
+                <span class="brand-sub">Welcome, <?php echo htmlspecialchars($user_name); ?></span>
             </div>
         </div>
-        <hr>
-    </header>
 
-    <div class="menu-bar">
-        <div class="menu">
-            <ul class="menu-links">
-                <li class="nav-link"><a href="admin_dashboard.php" class="tablinks">Dashboard</a></li>
-                <li class="nav-link"><a href="admin_manage.php" class="tablinks">Manage Staff</a></li>    
-                <li class="nav-link"><a href="admin_documents.php" class="tablinks">Add Documents</a></li>                 
-            </ul>
-        </div>
-        <div class="bottom-content">
-            <li class="nav-link"><a href="logout_user.php" class="tablinks">Logout</a></li>
-        </div>
-    </div>
-</nav>
+        <ul class="menu-links">
+            <li><a class="tablinks" href="admin_dashboard.php"><i class='bx bx-grid'></i> Dashboard</a></li>
+            <li><a class="tablinks active" href="admin_manage.php"><i class='bx bx-user'></i> Manage Staff</a></li>
+            <li><a class="tablinks" href="admin_documents.php"><i class='bx bx-folder-open'></i> Documents</a></li>
+            <li class="spacer"></li>
+            <li><a class="tablinks" href="logout_user.php"><i class='bx bx-log-out'></i> Logout</a></li>
+        </ul>
+    </nav>
+
 
 <section class="home" id="home-section">
 
@@ -325,170 +323,6 @@ if (isset($_POST['updateStaff'])) {
     </form>
   </div>
 </div>
-
-<style>
-/* General Modal Background */
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 1000;
-  left: 0; top: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
-}
-
-/* Modal Box */
-.modal-content {
-  background: #fff;
-  margin: 8% auto;
-  margin-bottom: 700px;
-  padding: 25px 30px;
-  width: 450px;
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-  font-family: Arial, sans-serif;
-  animation: fadeIn 0.3s ease-out;
-}
-
-/* Title */
-.modal-content h2 {
-  margin-top: 0;
-  font-size: 22px;
-  text-align: center;
-  color: #333;
-}
-
-/* Labels */
-.modal-content label {
-  display: block;
-  margin: 12px 0 5px;
-  font-weight: bold;
-  color: #444;
-}
-
-/* Inputs */
-.modal-content input[type="text"],
-.modal-content input[type="email"],
-.modal-content input[type="number"] {
-  width: 100%;
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  margin-bottom: 10px;
-  transition: border 0.2s;
-}
-
-.modal-content input:focus {
-  border-color: #007bff;
-  outline: none;
-}
-
-/* Department checkboxes container */
-#departmentsCheckboxes {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr); /* 2 columns */
-  gap: 8px 15px;
-  margin-top: 8px;
-}
-
-/* Checkbox label cards */
-#departmentsCheckboxes label {
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-  font-weight: normal;
-  background: #f8f9fa;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid #ddd;
-  cursor: pointer;
-  transition: background 0.2s, border 0.2s, box-shadow 0.2s;
-}
-
-/* Hover effect */
-#departmentsCheckboxes label:hover {
-  background: #e9ecef;
-  border-color: #ccc;
-}
-
-/* Checkbox spacing */
-#departmentsCheckboxes input {
-  margin-right: 8px;
-}
-
-/* Highlight selected checkboxes */
-#departmentsCheckboxes input:checked + span {
-  font-weight: bold;
-  color: #28a745;
-}
-#departmentsCheckboxes input:checked:parent {
-  border-color: #28a745;
-  box-shadow: 0 0 5px rgba(40,167,69,0.4);
-}
-
-/* Buttons */
-.modal-content button {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.2s;
-  margin-top: 10px;
-}
-
-.modal-content button[name="updateStaff"] {
-  background: #28a745;
-  color: #fff;
-  width: 100%;
-}
-
-.modal-content button[name="updateStaff"]:hover {
-  background: #218838;
-}
-
-.modal-content button[name="deleteStaff"] {
-  background: #dc3545;
-  color: #fff;
-  margin-right: 10px;
-}
-
-.modal-content button[name="deleteStaff"]:hover {
-  background: #c82333;
-}
-
-.modal-content button#cancelDelete {
-  background: #6c757d;
-  color: #fff;
-}
-
-.modal-content button#cancelDelete:hover {
-  background: #5a6268;
-}
-
-/* Close button (X) */
-.close-btn {
-  float: right;
-  cursor: pointer;
-  font-size: 22px;
-  font-weight: bold;
-  color: #999;
-  transition: color 0.2s;
-}
-
-.close-btn:hover {
-  color: #333;
-}
-
-/* Animation */
-@keyframes fadeIn {
-  from {opacity: 0; transform: translateY(-20px);}
-  to {opacity: 1; transform: translateY(0);}
-}
-
-</style>
 
 
 <script>
