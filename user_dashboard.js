@@ -181,6 +181,5 @@ document.getElementById("final-submit").addEventListener("click", function() {
     document.querySelector("form").submit();
 });
 
-//Calendar Modal
     
     

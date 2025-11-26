@@ -330,7 +330,7 @@ body{
 }
 
 .modal-box input:focus {
-  border-color: #0070ff;
+  border-color: #008c45;
   box-shadow: 0 0 0 2px rgba(0,112,255,0.18);
   outline: none;
 }
@@ -344,7 +344,7 @@ body{
 }
 
 .btn-save {
-  background: #0070ff;
+  background: #008c45;
   color: #fff;
   padding: 9px 18px;
   border: none;
@@ -366,3 +366,5 @@ body{
 }
 
 .btn-cancel:hover { background: #d3d3d3; }
+
+

@@ -18,11 +18,11 @@ if (!$action) {
     exit;
 }
 
-// -------------------- UTILITY: GET FIRST QUEUE ITEM --------------------
+// -------------------- GET FIRST QUEUE ITEM --------------------
 function getFirstQueueItem($pdo, $department, $exclude_id = null) {
     $sql = "
         SELECT * FROM requests
-        WHERE status IN ('In Queue Now','To Be Claimed')
+        WHERE status='In Queue Now'
           AND department=:department
           AND DATE(claim_date)=CURDATE()
           AND (call_attempts IS NULL OR call_attempts < 3)
@@ -34,41 +34,12 @@ function getFirstQueueItem($pdo, $department, $exclude_id = null) {
         $params[':exclude_id'] = $exclude_id;
     }
 
-    $sql .= " ORDER BY created_at ASC LIMIT 1";
+    // Serve based on fixed queueing_num (lowest first)
+    $sql .= " ORDER BY queueing_num ASC LIMIT 1";
 
     $stmtQueue = $pdo->prepare($sql);
     $stmtQueue->execute($params);
     return $stmtQueue->fetch(PDO::FETCH_ASSOC);
-}
-
-// -------------------- RECALCULATE QUEUEING NUMBERS --------------------
-function recalcQueueingNum($pdo, $department) {
-    // Serving items = queueing_num 1
-    $stmtServing = $pdo->prepare("SELECT id FROM requests WHERE status='Serving' AND department=:department");
-    $stmtServing->execute([':department' => $department]);
-    $servingItems = $stmtServing->fetchAll(PDO::FETCH_COLUMN);
-
-    foreach ($servingItems as $id) {
-        $stmtUpdate = $pdo->prepare("UPDATE requests SET queueing_num=1 WHERE id=:id");
-        $stmtUpdate->execute([':id' => $id]);
-    }
-
-    // Queueing items = queueing_num 2, 3, 4...
-    $stmtQueue = $pdo->prepare("
-        SELECT id FROM requests
-        WHERE status='In Queue Now'
-          AND department=:department
-        ORDER BY created_at ASC
-    ");
-    $stmtQueue->execute([':department' => $department]);
-    $queueItems = $stmtQueue->fetchAll(PDO::FETCH_COLUMN);
-
-    $queueNum = 2;
-    foreach ($queueItems as $id) {
-        $stmtUpdate = $pdo->prepare("UPDATE requests SET queueing_num=:queueing_num WHERE id=:id");
-        $stmtUpdate->execute([':queueing_num' => $queueNum, ':id' => $id]);
-        $queueNum++;
-    }
 }
 
 // -------------------- MANUAL ACTIONS --------------------
@@ -117,22 +88,23 @@ try {
 
             $attempts = (int)$request['call_attempts'] + 1;
 
+            $serveMessage = "";
             if ($attempts >= 3) {
-                // Move to To Be Claimed
+                // Move to To Be Claimed (cannot be revived)
                 $stmtUpdate = $pdo->prepare("
                     UPDATE requests
                     SET status='To Be Claimed',
                         call_attempts=0,
                         processing_start=NULL,
-                        queueing_num=0,
                         serving_position=0,
                         updated_at=NOW()
                     WHERE id=:id
                 ");
                 $stmtUpdate->execute([':id' => $request_id]);
                 $backMessage = "Moved to 'To Be Claimed' (3 attempts reached)";
+
             } else {
-                // Move back to In Queue Now
+                // Move back to In Queue Now (can be served again)
                 $stmtUpdate = $pdo->prepare("
                     UPDATE requests
                     SET status='In Queue Now',
@@ -145,10 +117,8 @@ try {
                 $backMessage = "Moved back to queue (Attempt {$attempts})";
             }
 
-            // Auto-serve next in queue
-            $department = $request['department'];
-            $nextQueue = getFirstQueueItem($pdo, $department, $request_id);
-            $serveMessage = "";
+            // Auto-serve next valid queue item (status='In Queue Now' AND call_attempts < 3)
+            $nextQueue = getFirstQueueItem($pdo, $request['department'], $request_id);
             if ($nextQueue) {
                 $stmtUpdate = $pdo->prepare("
                     UPDATE requests
@@ -185,9 +155,8 @@ try {
             ");
             $stmtUpdate->execute([':id' => $request_id]);
 
-            // Auto-serve next in queue
-            $department = $request['department'];
-            $nextQueue = getFirstQueueItem($pdo, $department);
+            // Auto-serve next valid queue item
+            $nextQueue = getFirstQueueItem($pdo, $request['department']);
             if ($nextQueue) {
                 $stmtUpdate = $pdo->prepare("
                     UPDATE requests
@@ -206,11 +175,6 @@ try {
 
         default:
             throw new Exception("Unknown action");
-    }
-
-    // -------------------- RECALCULATE QUEUEING NUMBERS --------------------
-    if (isset($department)) {
-        recalcQueueingNum($pdo, $department);
     }
 
     echo json_encode(['success' => true, 'message' => $message]);

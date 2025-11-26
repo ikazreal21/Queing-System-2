@@ -54,16 +54,17 @@ $stmt = $pdo->prepare("
         d.name AS department_name,
         COUNT(r.id) AS completed_requests
     FROM users u
+    LEFT JOIN staff_departments sd ON sd.staff_id = u.id
+    LEFT JOIN departments d ON d.id = sd.department_id
     LEFT JOIN requests r 
            ON r.served_by = u.id 
           AND r.status = 'Completed' 
           $whereDate
-    LEFT JOIN departments d 
-           ON u.department_id = d.id
     WHERE u.role = 'staff'
     GROUP BY u.id, u.first_name, u.last_name, u.counter_no, d.name
     ORDER BY completed_requests DESC
 ");
+
 $stmt->execute();
 $staff_completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -90,7 +91,7 @@ $staff_completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <ul class="menu-links">
         <li><a href="admin_dashboard.php" class="active"><i class='bx bx-home'></i> Dashboard</a></li>
         <li><a href="admin_manage.php"><i class='bx bx-user'></i> Manage Staff</a></li>
-        <li><a href="admin_documents.php"><i class='bx bx-file'></i> Add Documents</a></li>
+        <li><a href="admin_documents.php"><i class='bx bx-file'></i>Admin Resources</a></li>
 
         <li class="spacer"></li>
 

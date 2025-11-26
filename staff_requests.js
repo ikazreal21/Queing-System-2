@@ -159,8 +159,8 @@ function startProcessingCountdownForRow(row) {
     const countdownCell = row.querySelector('.countdown');
     if (!countdownCell) return;
 
-    const scheduledDate = row.dataset.scheduledDate;
-    if (!scheduledDate) {
+    const processingEnd = row.dataset.processingEnd;
+    if (!processingEnd) {
         countdownCell.textContent = '-- : -- : --';
         return;
     }
@@ -169,7 +169,7 @@ function startProcessingCountdownForRow(row) {
 
     const interval = setInterval(async () => {
         const now = Date.now();
-        const endTime = new Date(scheduledDate).getTime();
+        const endTime = new Date(processingEnd).getTime();
         let remaining = Math.floor((endTime - now) / 1000);
 
         if (remaining <= 0) {

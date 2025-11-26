@@ -252,111 +252,6 @@ if ($request && !empty($request['queueing_num'])) {
 </div>
 <?php endif; ?>
 
-
-
-     <!-- Background Music -->
-    <audio id="loginMusic" autoplay loop hidden>
-    <source src="assets/risetothetop.mp3" type="audio/mpeg">
-    Your browser does not support the audio element.
-</audio>
-
-<!-- 🎵 Music Control Widget -->
-<div id="music-control">
-    <span id="song-title">🎵 Now Playing: Rise to the Top</span>
-    <button id="mute-btn">Mute</button>
-    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.1">
-</div>
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    const music = document.getElementById("loginMusic");
-    const muteBtn = document.getElementById("mute-btn");
-    const volumeSlider = document.getElementById("volume-slider");
-
-    // ✅ Set default volume to 20%
-    music.volume = 0.2;
-
-    // Try autoplay
-    music.play().catch(() => {
-        document.body.addEventListener("click", () => {
-            music.play();
-        }, { once: true });
-    });
-
-    // Mute / Unmute toggle
-    muteBtn.addEventListener("click", () => {
-        if (music.muted) {
-            music.muted = false;
-            muteBtn.textContent = "Mute";
-            volumeSlider.value = music.volume;
-        } else {
-            music.muted = true;
-            muteBtn.textContent = "Unmute";
-        }
-    });
-
-    // Volume control
-    volumeSlider.addEventListener("input", () => {
-        music.volume = volumeSlider.value;
-        if (music.volume === 0) {
-            music.muted = true;
-            muteBtn.textContent = "Unmute";
-        } else {
-            music.muted = false;
-            muteBtn.textContent = "Mute";
-        }
-    });
-});
-</script>
-
-
-    <style>
-        /* 🎵 Music Control Styles */
-        #music-control {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            color: #fff;
-            padding: 10px 15px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-            z-index: 9999;
-        }
-
-        #mute-btn {
-            background: #ff5252;
-            border: none;
-            color: white;
-            padding: 5px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-
-        #mute-btn:hover {
-            background: #ff3030;
-        }
-
-        /* 🎚️ Hide slider by default */
-        #volume-slider {
-            width: 100px;
-            cursor: pointer;
-            display: none;
-        }
-
-        /* Show slider when hovering over the music control */
-        #music-control:hover #volume-slider {
-            display: inline-block;
-        }
-    </style>
-
-
     <div class="container">
 <!---------- HEADER ----------> 
     <nav id="header">
@@ -723,52 +618,56 @@ setInterval(updateRegistrarStatus, 60000);
         <!-- Your queue info -->
         <div class="service-box">
             <?php
-            // Defensive: ensure variables exist to avoid notices
-            $queue_num = isset($queue_num) ? $queue_num : null;
-            $request_status = isset($request_status) ? $request_status : null;
+            // Defensive checks
+            $queue_num = $queue_num ?? null;
+            $request_status = $request_status ?? null;
+            $display_status = $display_status ?? null;
+            $is_your_turn = $is_your_turn ?? false;
+            $position_in_line = $position_in_line ?? null;
             ?>
 
-            <?php if ($queue_num === null || $display_status === 'Pending'): ?>
-    <label>You are <b>not yet in the queue</b>.</label>
-    <h3>N/A</h3>
-    <p style="color: gray; font-weight: bold; margin-top: 10px;">📌 Your request is still pending approval.</p>
+            <?php if ($display_status === 'Pending' || $queue_num === null): ?>
+                <label>Your queue number is <b>N/A</b></label>
+                <p style="color: gray; font-weight: bold; margin-top: 10px;">
+                    📌 Your request is still pending approval.
+                </p>
 
-<?php elseif ($is_your_turn): ?>
-    <label>It’s your <b>turn now!</b></label>
-    <h3><?php echo htmlspecialchars((string)$queue_num); ?></h3>
-    <p style="color: green; font-weight: bold; margin-top: 10px;">🎉 Please proceed to the counter.</p>
+            <?php elseif ($is_your_turn && $display_status === 'Serving'): ?>
+                <label>Your queue number is</label>
+                <h3><?php echo htmlspecialchars((string)$queue_num); ?></h3>
+                <p style="color: green; font-weight: bold; margin-top: 10px;">
+                    🎉 It’s your turn now! Please proceed to the counter.
+                </p>
 
-<?php elseif ($display_status === 'In Queue Now' || $display_status === 'Processing' || $display_status === 'To Be Claimed'): ?>
-    <label>You are currently <b>in the queue</b> (waiting).</label>
+            <?php elseif ($display_status === 'In Queue Now'): ?>
+    <label>Your queue number is</label>
     <h3><?php echo htmlspecialchars((string)$queue_num); ?></h3>
     <p style="color: orange; font-weight: bold; margin-top: 10px;">
-        ⏳ Position in line: <?php echo ($position_in_line !== null) ? (int)$position_in_line : 'N/A'; ?> — Est. wait: <?php echo ($estimated_time !== null) ? $estimated_time : 'N/A'; ?>
+        ⏳ Position in line: <?php echo ($position_in_line !== null) ? ((int)$position_in_line + 1) : 1; ?>
     </p>
 
-<?php elseif ($display_status === 'To Be Claimed'): ?>
-    <label>✅ Your request is ready <b>to be claimed</b>.</label>
-    <h3><?php echo htmlspecialchars((string)$queue_num); ?></h3>
-    <p style="color: blue; font-weight: bold; margin-top: 10px;">📍 Please go to the office to claim your document.</p>
 
-<?php elseif ($display_status === 'Completed'): ?>
-    <label>🎉 Your request has been <b>completed</b>.</label>
-    <h3>N/A</h3>
+            <?php elseif ($display_status === 'To Be Claimed'): ?>
+                <label>Your queue number is <b>N/A</b></label>
+                <p style="color: blue; font-weight: bold; margin-top: 10px;">
+                    📍 Please go to the office to claim your document.
+                </p>
 
-<?php elseif ($display_status === 'Declined'): ?>
-    <label>❌ Your request has been <b>declined</b>.</label>
-    <h3>N/A</h3>
+            <?php elseif ($display_status === 'Completed'): ?>
+                <label>Your queue number is <b>N/A</b></label>
 
-<?php else: ?>
-    <label>You are <b>not in line</b>.</label>
-    <h3>N/A</h3>
-<?php endif; ?>
+            <?php elseif ($display_status === 'Declined'): ?>
+                <label>Your queue number is <b>N/A</b></label>
 
+            <?php else: ?>
+                <label>Your queue number is <b>N/A</b></label>
+            <?php endif; ?>
         </div>
 
         <!-- Currently serving info -->
         <div class="service-box">
             <?php if (!empty($currently_serving) && is_array($currently_serving)): ?>
-                <label><b>Now Serving:</b></label>
+                <label><b>Now Serving Queue Number:</b></label>
                 <h3><?php echo htmlspecialchars((string)($currently_serving['queueing_num'] ?? 'N/A')); ?></h3>
                 <p>
                     Counter: <b><?php echo htmlspecialchars((string)($currently_serving['counter_no'] ?? 'N/A')); ?></b><br>
@@ -783,13 +682,104 @@ setInterval(updateRegistrarStatus, 60000);
     </div>
 </section>
 
+<audio id="queueNotif" src="assets/notif.mp3" preload="auto"></audio>
+<style>
+/* Flash message modal */
+#turnModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: none; /* hidden by default */
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
 
+#turnModal .box {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    text-align: center;
+    max-width: 300px;
+}
+#turnModal button {
+    margin-top: 15px;
+    padding: 10px 20px;
+    border: none;
+    background: #4CAF50;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+}
+</style>
 
+<!-- Flash popup -->
+<div id="turnModal">
+    <div class="box">
+        <h3>🎉 It's Your Turn!</h3>
+        <p>Please proceed to the counter.</p>
+        <button id="closeNotif">Okay</button>
+    </div>
+</div>
 
+<script>
+const isYourTurn = <?php echo json_encode($is_your_turn); ?>;
+const status = <?php echo json_encode($display_status); ?>;
 
+const audio = document.getElementById("queueNotif");
+const modal = document.getElementById("turnModal");
+const closeBtn = document.getElementById("closeNotif");
 
+// Hard stop audio (strongest method)
+function stopSound() {
+    audio.pause();
+    audio.currentTime = 0;
+    audio.loop = false;
+    console.log("Sound STOPPED");
+}
 
+// Show modal + sound
+if (isYourTurn && status === "Serving") {
+    modal.style.display = "flex";
+    audio.loop = true;
 
+    audio.play().catch(() => {
+        console.warn("Autoplay blocked. Will wait for click.");
+    });
+
+    document.addEventListener("click", () => audio.play(), { once: true });
+}
+
+// Auto-refresh queue section only
+function refreshQueueSection() {
+    fetch(window.location.href, { cache: "no-store" })
+        .then(r => r.text())
+        .then(html => {
+            const doc = new DOMParser().parseFromString(html, "text/html");
+            const newSection = doc.querySelector("#services");
+            const currentSection = document.querySelector("#services");
+
+            if (newSection && currentSection) {
+                currentSection.innerHTML = newSection.innerHTML;
+            }
+
+            // Ensure sound is OFF after refresh
+            stopSound();
+        });
+}
+
+// When clicking OK button
+closeBtn.addEventListener("click", () => {
+    stopSound();                 // ⬅️ Stop first
+    modal.style.display = "none";
+
+    // Start auto-refreshing
+    setInterval(refreshQueueSection, 5000);
+});
+</script>
 
 <!---------- CONTACT ----------> 
 <section class="section" id="contact">

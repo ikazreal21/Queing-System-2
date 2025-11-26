@@ -150,7 +150,7 @@ if (isset($_POST['updateStaff'])) {
         <div class="brand">
             <img src="assets/fatimalogo.jpg" alt="logo" class="brand-logo">
             <div class="brand-text">
-                <span class="brand-title">Admin Documents</span>
+                <span class="brand-title">Admin Dashboard</span>
                 <span class="brand-sub">Welcome, <?php echo htmlspecialchars($user_name); ?></span>
             </div>
         </div>
@@ -158,7 +158,7 @@ if (isset($_POST['updateStaff'])) {
         <ul class="menu-links">
             <li><a class="tablinks" href="admin_dashboard.php"><i class='bx bx-grid'></i> Dashboard</a></li>
             <li><a class="tablinks active" href="admin_manage.php"><i class='bx bx-user'></i> Manage Staff</a></li>
-            <li><a class="tablinks" href="admin_documents.php"><i class='bx bx-folder-open'></i> Documents</a></li>
+            <li><a class="tablinks" href="admin_documents.php"><i class='bx bx-folder-open'></i>Admin Resources</a></li>
             <li class="spacer"></li>
             <li><a class="tablinks" href="logout_user.php"><i class='bx bx-log-out'></i> Logout</a></li>
         </ul>

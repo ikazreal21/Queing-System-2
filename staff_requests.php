@@ -44,33 +44,37 @@ $statuses = ['Pending', 'Processing', 'To Be Claimed', 'Completed', 'Declined'];
 $requests = [];
 
 foreach ($statuses as $status) {
-    $sql = "SELECT r.*, d.processing_days 
-            FROM requests r 
+
+    $sql = "SELECT r.*, d.processing_days
+            FROM requests r
             LEFT JOIN documents d ON r.documents = d.name
-            WHERE status = :status";
+            WHERE r.status = :status";
+
     $params = [':status' => $status];
 
+    // Filter by staff departments (department names)
     if (!empty($staff_departments)) {
-        $inPlaceholders = [];
+        $ph = [];
         foreach ($staff_departments as $i => $dept) {
             $key = ":dept$i";
-            $inPlaceholders[] = $key;
+            $ph[] = $key;
             $params[$key] = $dept;
         }
-        $sql .= " AND department IN (" . implode(',', $inPlaceholders) . ")";
+        $sql .= " AND r.department IN (" . implode(",", $ph) . ")";
     }
 
     if ($filter_date) {
-        $sql .= " AND DATE(created_at) = :created_date";
+        $sql .= " AND DATE(r.created_at) = :created_date";
         $params[':created_date'] = $filter_date;
     }
 
-    $sql .= " ORDER BY created_at DESC";
+    $sql .= " ORDER BY r.created_at DESC";
+
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
+
     $requests[$status] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
-
 // Fetch departments for walk-in modal
 $stmt = $pdo->query("SELECT id, name FROM departments ORDER BY name ASC");
 $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -211,48 +215,48 @@ document.addEventListener("DOMContentLoaded", () => {
             </thead>
             <tbody>
             <?php foreach ($requests['Processing'] as $req): ?>
-                <tr data-request-id="<?= $req['id'] ?>" data-scheduled-date="<?= htmlspecialchars($req['scheduled_date'] ?? '') ?>">
-                    <td><?= $req['id'] ?></td>
-                    <td><?= htmlspecialchars($req['first_name'] . " " . $req['last_name']) ?></td>
-                    <td><?= htmlspecialchars($req['documents']) ?></td>
-                    <td>
-                        <?php if ($req['attachment']): ?>
-                            <button class="action-btn view-btn" data-attachment='<?= $req['attachment'] ?>'>View</button>
-                        <?php else: ?>No attachment<?php endif; ?>
-                    </td>
-                    <td class="scheduled-date">
-                        <?php if (!empty($req['scheduled_date'])): ?>
-                            <?= (new DateTime($req['scheduled_date'], new DateTimeZone('Asia/Manila')))->format('F d Y h:i A') ?>
-                        <?php else: ?>--<?php endif; ?>
-                    </td>
-                    <td class="countdown">-- : -- : --</td>
-                    <td>
-                        <!-- Proceed to Claim -->
-                        <form method="post" action="update_request.php" class="finish-form" style="display:inline;">
-                            <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
-                            <input type="hidden" name="action" value="finish">
-                            <button type="button" class="action-btn finish-btn">Proceed to Claim</button>
-                        </form>
+<tr 
+    data-request-id="<?= $req['id'] ?>" 
+    data-processing-start="<?= htmlspecialchars($req['processing_start'] ?? '') ?>" 
+    data-processing-end="<?= htmlspecialchars($req['processing_end'] ?? '') ?>"
+>
+    <td><?= $req['id'] ?></td>
+    <td><?= htmlspecialchars($req['first_name'] . " " . $req['last_name']) ?></td>
+    <td><?= htmlspecialchars($req['documents']) ?></td>
+    <td>
+        <?php if ($req['attachment']): ?>
+            <button class="action-btn view-btn" data-attachment="<?= htmlspecialchars($req['attachment']) ?>">View</button>
+        <?php else: ?>No attachment<?php endif; ?>
+    </td>
+    <td class="scheduled-date">--</td>
+    <td class="countdown">-- : -- : --</td>
+    <td>
+        <!-- Proceed to Claim -->
+        <form method="post" action="update_request.php" class="finish-form" style="display:inline;">
+            <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
+            <input type="hidden" name="action" value="finish">
+            <button type="button" class="action-btn finish-btn">Proceed to Claim</button>
+        </form>
 
-                        <!-- Back to Pending (only if not walk-in) -->
-                        <?php if (empty($req['walk_in']) || $req['walk_in'] != 1): ?>
-                        <form method="post" action="update_request.php" class="pending-form" style="display:inline;">
-                            <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
-                            <input type="hidden" name="action" value="pending">
-                            <button type="button" class="action-btn pending-btn">Back to Pending</button>
-                        </form>
-                        <?php endif; ?>
+        <!-- Back to Pending (only if not walk-in) -->
+        <?php if (empty($req['walk_in']) || $req['walk_in'] != 1): ?>
+        <form method="post" action="update_request.php" class="pending-form" style="display:inline;">
+            <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
+            <input type="hidden" name="action" value="pending">
+            <button type="button" class="action-btn pending-btn">Back to Pending</button>
+        </form>
+        <?php endif; ?>
 
-                        <!-- Decline -->
-                        <form method="post" action="update_request.php" class="decline-form" style="display:inline;">
-                            <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
-                            <input type="hidden" name="action" value="decline">
-                            <input type="hidden" name="reason" value="">
-                            <button type="button" class="action-btn decline-btn">✗</button>
-                        </form>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
+        <!-- Decline -->
+        <form method="post" action="update_request.php" class="decline-form" style="display:inline;">
+            <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
+            <input type="hidden" name="action" value="decline">
+            <input type="hidden" name="reason" value="">
+            <button type="button" class="action-btn decline-btn">✗</button>
+        </form>
+    </td>
+</tr>
+<?php endforeach; ?>
             </tbody>
         </table>
     </div>

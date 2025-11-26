@@ -71,44 +71,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Convert attachments array to JSON string for database storage
         $attachmentStr = !empty($attachments) ? json_encode($attachments, JSON_UNESCAPED_SLASHES) : null;
 
-        // 🔹 Calculate processing time + dates
-        $processing_time = null;
-        $processing_start = null;
-        $processing_deadline = null;
-        $scheduled_date = null;
+        // 🔹 FORCE ALL PROCESSING FIELDS TO NULL
+        $processing_time       = null;
+        $processing_start      = null;
+        $processing_deadline   = null;
+        $scheduled_date        = null;
 
-        if (!empty($documents)) {
-            $docNames = explode(", ", $documents);
-            $placeholders = rtrim(str_repeat('?,', count($docNames)), ',');
-            $stmtDocs = $pdo->prepare("SELECT MAX(processing_days) FROM documents WHERE name IN ($placeholders)");
-            $stmtDocs->execute($docNames);
-            $max_days = (int)$stmtDocs->fetchColumn();
-
-            if ($max_days > 0) {
-                // processing_time should remain NULL since the column expects datetime, not int
-                $stmtNow = $pdo->query("SELECT NOW()");
-                $processing_start = $stmtNow->fetchColumn();
-
-                $stmtDeadline = $pdo->prepare("SELECT DATE_ADD(:now, INTERVAL :days DAY)");
-                $stmtDeadline->execute([':now' => $processing_start, ':days' => $max_days]);
-                $processing_deadline = $stmtDeadline->fetchColumn();
-                $scheduled_date = $processing_deadline;
-            }
-        }
-
-        // 🔹 Only assign queue number if not Declined
-        $queueing_num = null;
+        // 🔹 FORCE QUEUE NUMBER AND SERVING POSITION TO NULL
+        $queueing_num     = null;
         $serving_position = null;
-
-        if ($status !== "Declined") {
-            $stmtQueue = $pdo->prepare("SELECT MAX(queueing_num) FROM requests WHERE department = ?");
-            $stmtQueue->execute([$department]);
-            $maxQueue = $stmtQueue->fetchColumn();
-            $queueing_num = $maxQueue ? $maxQueue + 1 : 1;
-
-            // serving_position = queueing_num initially
-            $serving_position = $queueing_num;
-        }
 
         // Insert into DB
         $sql = "INSERT INTO requests 

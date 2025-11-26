@@ -1,6 +1,6 @@
-/* admin_manage.css — Modern semi-rounded design */
+/* admin_dashboard.css — matched to admin_documents.css (Modern, semi-rounded) */
 
-/* ===== Fonts & reset ===== */
+/* ===== Typography & reset ===== */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 :root{
@@ -23,7 +23,7 @@ body{
     min-height: 100vh;
 }
 
-/* ===== Sidebar ===== */
+/* ===== Sidebar (same look as documents) ===== */
 .sidebar{
     position: fixed;
     left: 0;
@@ -53,8 +53,18 @@ body{
     border-radius: 8px;
 }
 
-.brand-title{ font-weight: 600; font-size: 15px; }
-.brand-sub{ font-size: 12px; color: var(--muted); margin-top: 3px; }
+.brand-title{
+    display: block;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.brand-sub{
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 3px;
+}
 
 .menu-links{
     list-style: none;
@@ -84,6 +94,15 @@ body{
 }
 
 .menu-links .spacer{ flex-grow: 1; }
+
+/* ===== Main Content (mirrors documents) ===== */
+.home{
+    margin-left: 270px; /* leaves space for sidebar */
+    padding: 28px;
+    padding-bottom: 80px;
+    min-height: 100vh;
+}
+
 
 /* ===== Main content ===== */
 .home{
