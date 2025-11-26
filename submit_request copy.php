@@ -85,7 +85,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $max_days = (int)$stmtDocs->fetchColumn();
 
             if ($max_days > 0) {
-                // processing_time should remain NULL since the column expects datetime, not int
+                $processing_time = $max_days;
                 $stmtNow = $pdo->query("SELECT NOW()");
                 $processing_start = $stmtNow->fetchColumn();
 

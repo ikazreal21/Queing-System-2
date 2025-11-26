@@ -166,7 +166,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <td><?= htmlspecialchars($req['documents']) ?></td>
     <td>
         <?php if($req['attachment']): ?>
-            <button class="action-btn view-btn" data-attachment="<?= htmlspecialchars($req['attachment']) ?>">View</button>
+            <button class="action-btn view-btn" data-attachment='<?= $req['attachment'] ?>'>View</button>
         <?php else: ?>No attachment<?php endif; ?>
     </td>
     <td>
@@ -217,7 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td><?= htmlspecialchars($req['documents']) ?></td>
                     <td>
                         <?php if ($req['attachment']): ?>
-                            <button class="action-btn view-btn" data-attachment="<?= htmlspecialchars($req['attachment']) ?>">View</button>
+                            <button class="action-btn view-btn" data-attachment='<?= $req['attachment'] ?>'>View</button>
                         <?php else: ?>No attachment<?php endif; ?>
                     </td>
                     <td class="scheduled-date">
@@ -282,7 +282,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td><?= htmlspecialchars($req['documents']) ?></td>
                     <td>
                         <?php if ($req['attachment']): ?>
-                            <button class="action-btn view-btn" data-attachment="<?= htmlspecialchars($req['attachment']) ?>">View</button>
+                            <button class="action-btn view-btn" data-attachment='<?= $req['attachment'] ?>'>View</button>
                         <?php else: ?>
                             No attachment
                         <?php endif; ?>
@@ -351,7 +351,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <td><?= htmlspecialchars($req['documents']) ?></td>
                             <td>
                                 <?php if($req['attachment']): ?>
-                                    <button class="action-btn view-btn" data-attachment="<?= htmlspecialchars($req['attachment']) ?>">View</button>
+                                    <button class="action-btn view-btn" data-attachment='<?= $req['attachment'] ?>'>View</button>
                                 <?php else: ?>No attachment<?php endif; ?>
                             </td>
                             <td><?= htmlspecialchars($req['decline_reason']) ?></td>

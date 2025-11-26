@@ -93,7 +93,7 @@ try {
 }
 
 // Fetch all requests for "My Requests" table
-$stmt = $pdo->prepare("SELECT id, created_at, documents, status, decline_reason, processing_time, claim_date, queueing_num
+$stmt = $pdo->prepare("SELECT id, created_at, documents, status, decline_reason, processing_time, processing_deadline, claim_date, queueing_num
                         FROM requests 
                         WHERE first_name = :first_name AND last_name = :last_name 
                         ORDER BY created_at DESC");
@@ -548,7 +548,7 @@ setInterval(updateRegistrarStatus, 60000);
 
 
             <div class="notes-section">
-                <label id="notes">Notes / Other Concerns:</label>
+                <label id="notes">Receipt Details:</label>
                 <textarea name="notes" rows="4" placeholder="Write any additional concerns here..."></textarea>
             </div>
 
@@ -679,9 +679,9 @@ setInterval(updateRegistrarStatus, 60000);
         <?php echo htmlspecialchars($req['decline_reason'] ?? 'No reason provided'); ?>
 
     <?php elseif ($req['status'] === 'Processing'): ?>
-        <?php if (!empty($req['processing_time'])): ?>
+        <?php if (!empty($req['processing_deadline'])): ?>
             Estimated ready by: 
-            <?php echo htmlspecialchars(date("M d, Y h:i A", strtotime($req['processing_time']))); ?>
+            <?php echo htmlspecialchars(date("M d, Y h:i A", strtotime($req['processing_deadline']))); ?>
         <?php else: ?>
             No estimated time set
         <?php endif; ?>
@@ -771,7 +771,6 @@ setInterval(updateRegistrarStatus, 60000);
                 <label><b>Now Serving:</b></label>
                 <h3><?php echo htmlspecialchars((string)($currently_serving['queueing_num'] ?? 'N/A')); ?></h3>
                 <p>
-                    Name: <?php echo htmlspecialchars($currently_serving['student_name'] ?? 'N/A'); ?><br>
                     Counter: <b><?php echo htmlspecialchars((string)($currently_serving['counter_no'] ?? 'N/A')); ?></b><br>
                     Staff: <b><?php echo htmlspecialchars($currently_serving['staff_name'] ?? 'Unknown'); ?></b>
                 </p>
@@ -951,7 +950,7 @@ document.querySelectorAll('input[name="documents[]"]').forEach(box => {
 
       document.getElementById("docLost").innerHTML =
         `⚠️ <b>Note:</b> If this document was previously issued and is now lost, 
-        an <b>Affidavit of Law</b> is required for re-request.`;
+        an <b>Affidavit of Loss</b> is required for re-request.`;
 
       infoModal.style.display = "flex";
     } else {

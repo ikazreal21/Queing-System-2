@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (attachments.length > 0 && attachments[0] !== "") {
                 attachments.forEach(file => {
                     const a = document.createElement("a");
-                    a.href = "uploads/" + file;
+                    a.href = file;
                     a.target = "_blank";
                     a.textContent = file;
                     a.style.display = "block";

@@ -83,6 +83,22 @@ $completedCount = $stmt->fetchColumn();
     border: 1px solid #ccc;
     font-size: 14px;
 }
+.attachment-image {
+    max-width: 300px;
+    max-height: 300px;
+    margin: 5px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+.attachment-link {
+    display: block;
+    margin: 5px 0;
+    color: #007bff;
+    text-decoration: none;
+}
+.attachment-link:hover {
+    text-decoration: underline;
+}
 </style>
 </head>
 <body>
@@ -163,7 +179,18 @@ $completedCount = $stmt->fetchColumn();
                         $stmt->execute(array_merge([$todayDate], $staff_departments));
                         $i = 1;
                         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                            $attachments = json_encode(array_map('trim', explode(',', $row['attachment'])));
+                            // Fix attachment formatting - remove brackets and quotes
+                            $attachments = $row['attachment'];
+                            if (!empty($attachments)) {
+                                // Remove brackets and quotes, then trim
+                                $attachments = trim($attachments, '[]"');
+                                // Split by comma and trim each element
+                                $attachmentArray = array_map('trim', explode(',', $attachments));
+                                $attachments = json_encode($attachmentArray);
+                            } else {
+                                $attachments = '[]';
+                            }
+                            
                             echo "<tr>";
                             echo "<td>" . $i++ . "</td>";
                             echo "<td>" . htmlspecialchars($row['first_name'] . " " . $row['last_name']) . "</td>";
@@ -262,6 +289,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const closeModal = modal.querySelector(".close");
     const attachmentContainer = document.getElementById("attachmentContainer");
 
+    // Function to check if file is an image
+    function isImageFile(filename) {
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+        return imageExtensions.some(ext => filename.toLowerCase().includes(ext));
+    }
+
     document.querySelectorAll(".viewDetails").forEach(button => {
         button.addEventListener("click", function () {
             document.getElementById("requestID").textContent = button.dataset.requestId;
@@ -276,17 +309,50 @@ document.addEventListener("DOMContentLoaded", function () {
 
             attachmentContainer.innerHTML = '';
             let attachments = [];
-            try { attachments = JSON.parse(button.dataset.requestAttachments); } 
-            catch (err) { attachments = []; }
+            try { 
+                attachments = JSON.parse(button.dataset.requestAttachments); 
+            } catch (err) { 
+                attachments = []; 
+            }
 
             if (attachments.length > 0 && attachments[0] !== "") {
                 attachments.forEach(file => {
-                    const a = document.createElement("a");
-                    a.href = "uploads/" + file;
-                    a.target = "_blank";
-                    a.textContent = file;
-                    a.style.display = "block";
-                    attachmentContainer.appendChild(a);
+                    if (isImageFile(file)) {
+                        // Create image element for image files
+                        const imgContainer = document.createElement("div");
+                        imgContainer.style.margin = "10px 0";
+                        
+                        const img = document.createElement("img");
+                        img.src = file;
+                        img.alt = "Attachment";
+                        img.className = "attachment-image";
+                        img.style.cursor = "pointer";
+                        
+                        // Make image clickable to open in new tab
+                        img.onclick = function() {
+                            window.open(file, '_blank');
+                        };
+                        
+                        const link = document.createElement("a");
+                        link.href = file;
+                        link.target = "_blank";
+                        link.className = "attachment-link";
+                        link.textContent = "View full size";
+                        
+                        imgContainer.appendChild(img);
+                        imgContainer.appendChild(link);
+                        attachmentContainer.appendChild(imgContainer);
+                    } else {
+                        // Create regular link for non-image files
+                        const link = document.createElement("a");
+                        link.href = file;
+                        link.target = "_blank";
+                        link.className = "attachment-link";
+                        link.textContent = file;
+                        link.style.display = "block";
+                        link.style.marginBottom = "5px";
+                        attachmentContainer.appendChild(link);
+                    }
                 });
             } else {
                 attachmentContainer.textContent = "No attachments.";

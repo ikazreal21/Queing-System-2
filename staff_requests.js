@@ -1,86 +1,3 @@
-/* =================== FLASH MESSAGE =================== */
-function showFlashMessage(message, type = "success") {
-    const flash = document.createElement("div");
-    flash.className = `flash-message ${type}`;
-    flash.textContent = message;
-    document.body.appendChild(flash);
-
-    setTimeout(() => flash.classList.add("show"), 10);
-    setTimeout(() => {
-        flash.classList.remove("show");
-        setTimeout(() => flash.remove(), 300);
-    }, 3000);
-}
-function showInputModal(title = "Enter reason") {
-    return new Promise((resolve) => {
-        const modal = document.getElementById('decline-modal');
-        const textarea = document.getElementById('decline-reason');
-        const submitBtn = document.getElementById('decline-submit');
-        const cancelBtn = document.getElementById('decline-cancel');
-
-        if (!modal || !textarea || !submitBtn || !cancelBtn) return resolve(null);
-
-        modal.style.display = 'flex';
-        textarea.value = '';
-        textarea.focus();
-
-        const cleanup = () => {
-            modal.style.display = 'none';
-            submitBtn.removeEventListener('click', submitHandler);
-            cancelBtn.removeEventListener('click', cancelHandler);
-        };
-
-        const submitHandler = () => { 
-            cleanup(); 
-            resolve(textarea.value.trim() || "No reason provided"); 
-        };
-        const cancelHandler = () => { 
-            cleanup(); 
-            resolve(null); 
-        };
-
-        submitBtn.addEventListener('click', submitHandler);
-        cancelBtn.addEventListener('click', cancelHandler);
-
-        // Close modal on click outside
-        modal.addEventListener('click', function outsideClick(e) {
-            if (e.target === modal) {
-                cleanup();
-                resolve(null);
-                modal.removeEventListener('click', outsideClick);
-            }
-        });
-    });
-}
-document.addEventListener('click', function(e) {
-    const target = e.target;
-    const row = target.closest('tr');
-    const requestId = row?.dataset.requestId;
-
-    if (!row || !requestId) return;
-
-    // Decline
-    if (target.classList.contains('decline-btn')) {
-        e.preventDefault();
-
-        (async () => {  // <- async IIFE
-            const reason = await showInputModal('Enter reason for declining:');
-            if (reason === null) return;
-
-            const declineReason = reason.trim() === '' ? 'No reason provided' : reason.trim();
-            const res = await postRequest('update_request.php', { 
-                request_id: requestId, 
-                action: 'decline', 
-                reason: declineReason 
-            });
-            if (!res.success) return showFlashMessage(res.message || 'Failed to decline request', 'error');
-
-            row.remove();
-            showFlashMessage('Request declined successfully!', 'success');
-        })();
-    }
-});
-
 /* =================== TOGGLE NAVIGATION BAR =================== */
 let navMenu = document.getElementById('navMenu');
 let toggleBtn = document.getElementById('toggleBtn');
@@ -129,31 +46,75 @@ const lightboxPDF = document.getElementById('lightboxPDF');
 const attachmentSelector = document.getElementById('attachmentSelector');
 const closeLightbox = document.getElementById('closeLightbox');
 
-function displayAttachment(filename) {
-    const ext = filename.split('.').pop().toLowerCase();
+function displayAttachment(attachmentData) {
+    let url = attachmentData;
+
+    // If it's an object with url property, extract the URL
+    if (typeof attachmentData === 'object' && attachmentData.url) {
+        url = attachmentData.url;
+    }
+
+    // Determine file type from URL or filename
+    let ext = '';
+    if (typeof attachmentData === 'object' && attachmentData.file_type) {
+        ext = attachmentData.file_type.toLowerCase();
+    } else {
+        ext = url.split('.').pop().toLowerCase().split('?')[0]; // Remove query params if any
+    }
+
     if (ext === 'pdf') {
         lightboxImage.style.display = 'none';
         lightboxPDF.style.display = 'block';
-        lightboxPDF.src = 'uploads/' + filename;
+        lightboxPDF.src = url;
     } else {
         lightboxPDF.style.display = 'none';
         lightboxImage.style.display = 'block';
-        lightboxImage.src = 'uploads/' + filename;
+        lightboxImage.src = url;
     }
 }
 
-document.addEventListener('click', function(e) {
+function parseAttachments(attachmentString) {
+    if (!attachmentString) return [];
+
+    try {
+        // Try to parse as JSON first (new Cloudinary format)
+        const parsed = JSON.parse(attachmentString);
+        if (Array.isArray(parsed)) {
+            return parsed;
+        }
+        return [parsed]; // Single object
+    } catch (e) {
+        // Fallback: treat as comma-separated filenames (old format)
+        return attachmentString.split(',').map(a => a.trim()).filter(a => a);
+    }
+}
+
+document.addEventListener('click', function (e) {
     if (e.target && e.target.classList.contains('view-btn')) {
-        const attachments = e.target.dataset.attachment.split(',').map(a => a.trim()).filter(a => a);
+        const attachmentString = e.target.dataset.attachment;
+        const attachments = parseAttachments(attachmentString);
+
         if (attachments.length === 0) return;
+
+        console.log('Parsed Attachments:', attachments);
 
         attachmentSelector.innerHTML = '';
         attachments.forEach((att, index) => {
             const option = document.createElement('option');
-            option.value = att;
-            option.textContent = attachments.length > 1 ? `Attachment ${index + 1}` : att;
+            option.value = JSON.stringify(att); // Store the full object as JSON
+
+            // Display name
+            let displayName = '';
+            if (typeof att === 'object') {
+                displayName = att.original_name || `Attachment ${index + 1}`;
+            } else {
+                displayName = attachments.length > 1 ? `Attachment ${index + 1}` : att;
+            }
+
+            option.textContent = displayName;
             attachmentSelector.appendChild(option);
         });
+
         displayAttachment(attachments[0]);
         lightboxOverlay.style.display = 'flex';
     }
@@ -167,7 +128,15 @@ document.addEventListener('click', function(e) {
 
 attachmentSelector.addEventListener('change', () => {
     const selected = attachmentSelector.value;
-    if (selected) displayAttachment(selected);
+    if (selected) {
+        try {
+            const attachmentData = JSON.parse(selected);
+            displayAttachment(attachmentData);
+        } catch (e) {
+            // Fallback for old format
+            displayAttachment(selected);
+        }
+    }
 });
 
 /* =================== GENERIC POST FUNCTION =================== */
@@ -222,7 +191,6 @@ function startProcessingCountdownForRow(row) {
                 td.innerHTML = `<input type="date" class="claim-date" data-request="${requestId}" value="">`;
                 toBeClaim.appendChild(tr);
                 setupClaimDateInputs();
-                showFlashMessage('Request moved to claim automatically!', 'success');
             }
         } else {
             const hours = Math.floor(remaining / 3600);
@@ -252,28 +220,29 @@ function setupClaimDateInputs() {
             if (!requestId || !claimDate) return;
 
             try {
-                const res = await postRequest('update_request.php', { 
-                    request_id: requestId, 
-                    action: 'update_claim_date', 
-                    claim_date: claimDate
+                const res = await postRequest('update_request.php', {
+                    request_id: requestId,
+                    action: 'update_claim_date',
+                    claim_date: claimDate // ✅ only send date, no status
                 });
 
                 if (res.success) {
-                    showFlashMessage(res.message, 'success');
+                    alert(res.message); // backend will say whether it's In Queue Now or To Be Claimed
                 } else {
-                    showFlashMessage('Failed: ' + res.message, 'error');
+                    alert('Failed: ' + res.message);
                 }
             } catch (err) {
                 console.error("Error updating claim date:", err);
-                showFlashMessage('Something went wrong.', 'error');
+                alert('Something went wrong.');
             }
         });
     });
 }
 setupClaimDateInputs();
 
+
 /* =================== APPROVE / FINISH / PENDING / DECLINE BUTTONS =================== */
-document.addEventListener('click', async function(e) {
+document.addEventListener('click', async function (e) {
     const target = e.target;
     const row = target.closest('tr');
     const requestId = row?.dataset.requestId;
@@ -283,9 +252,10 @@ document.addEventListener('click', async function(e) {
     // Approve
     if (target.classList.contains('approve-btn')) {
         e.preventDefault();
+        if (!confirm('Approve this request?')) return;
 
         const res = await postRequest('update_request.php', { request_id: requestId, action: 'approve' });
-        if (!res.success) return showFlashMessage(res.message || 'Failed to approve request', 'error');
+        if (!res.success) return alert(res.message || 'Failed to approve request');
 
         const processingTable = document.querySelector('#processing-box tbody');
         if (!processingTable) return;
@@ -299,15 +269,15 @@ document.addEventListener('click', async function(e) {
 
         processingTable.appendChild(row);
         startProcessingCountdownForRow(row);
-        showFlashMessage('Request approved successfully!', 'success');
     }
 
-    // Finish
+    // Proceed to Claim / Finish
     if (target.classList.contains('finish-btn')) {
         e.preventDefault();
+        if (!confirm('Proceed this request to claim?')) return;
 
         const res = await postRequest('update_request.php', { request_id: requestId, action: 'finish' });
-        if (!res.success) return showFlashMessage(res.message || 'Failed to proceed.', 'error');
+        if (!res.success) return alert(res.message || 'Failed to proceed.');
 
         const claimedTable = document.querySelector('#claimed-table tbody');
         if (!claimedTable) return;
@@ -317,45 +287,44 @@ document.addEventListener('click', async function(e) {
         td.innerHTML = `<input type="date" class="claim-date" data-request="${requestId}" value="">`;
         claimedTable.appendChild(row);
         setupClaimDateInputs();
-        showFlashMessage('Request moved to claim successfully!', 'success');
     }
 
-    // Pending
+    // Back to Pending (disabled for walk-ins)
     if (target.classList.contains('pending-btn')) {
         if (row.dataset.walkin === "1") return;
         e.preventDefault();
+        if (!confirm('Send this request back to pending?')) return;
 
         const res = await postRequest('update_request.php', { request_id: requestId, action: 'pending' });
-        if (!res.success) return showFlashMessage(res.message || 'Failed to revert request.', 'error');
+        if (!res.success) return alert(res.message || 'Failed to revert request.');
 
         const pendingTable = document.querySelector('#pending-box tbody');
         if (pendingTable) pendingTable.appendChild(row);
-        showFlashMessage('Request sent back to pending!', 'success');
     }
 
     // Decline
     if (target.classList.contains('decline-btn')) {
         e.preventDefault();
-
-        // Use your custom input modal
-        const reason = await showInputModal('Enter reason for declining:', 'Reason...');
-        if (reason === null) return; // user canceled
+        const reason = prompt('Enter reason for declining:', '');
+        if (reason === null) return;
 
         const declineReason = reason.trim() === '' ? 'No reason provided' : reason.trim();
         const res = await postRequest('update_request.php', { request_id: requestId, action: 'decline', reason: declineReason });
-        if (!res.success) return showFlashMessage(res.message || 'Failed to decline request', 'error');
-
+        if (!res.success) return alert(res.message || 'Failed to decline request');
         row.remove();
-        showFlashMessage('Request declined successfully!', 'success');
     }
 });
-
 
 /* =================== COMPLETED REQUESTS =================== */
 const completedPicker = document.getElementById('completed-date-picker');
 if (completedPicker) {
     const savedDate = localStorage.getItem('completedDate');
-    completedPicker.value = savedDate || new Date().toISOString().split('T')[0];
+    if (savedDate) {
+        completedPicker.value = savedDate;
+    } else {
+        const today = new Date();
+        completedPicker.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    }
 
     async function fetchCompleted(date) {
         if (!date) return;
@@ -378,7 +347,6 @@ if (completedPicker) {
             });
         } else {
             tbody.innerHTML = `<tr><td colspan="5">No records found for selected date.</td></tr>`;
-            showFlashMessage('No records found for selected date.', 'info');
         }
     }
 
@@ -389,20 +357,20 @@ if (completedPicker) {
         fetchCompleted(completedPicker.value);
     });
 }
-
-/* =================== WALK-IN MODAL & CONFIRMATION =================== */
 document.addEventListener("DOMContentLoaded", () => {
     const modal = document.getElementById("walkin-modal-unique");
     const openBtn = document.getElementById("walkin-all-btn");
     const closeBtn = document.getElementById("walkin-close-unique");
     const form = document.getElementById("walkin-form-unique");
 
+    // Confirmation modal elements
     const confirmModal = document.getElementById("walkin-confirm-modal");
     const confirmClose = document.getElementById("walkin-confirm-close");
     const confirmCancel = document.getElementById("walkin-confirm-cancel");
     const confirmSubmit = document.getElementById("walkin-confirm-submit");
     const confirmDetails = document.getElementById("walkin-confirm-details");
 
+    // Show/hide main modal
     const showModal = () => {
         modal.style.display = "block";
         localStorage.setItem("walkinModalOpen", "true");
@@ -414,16 +382,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     openBtn.addEventListener("click", showModal);
     closeBtn.addEventListener("click", hideModal);
-    window.addEventListener("click", (e) => { if (e.target === modal) hideModal(); });
+    window.addEventListener("click", (e) => {
+        if (e.target === modal) hideModal();
+    });
 
-    if (localStorage.getItem("walkinModalOpen") === "true") modal.style.display = "block";
+    // Restore main modal state
+    if (localStorage.getItem("walkinModalOpen") === "true") {
+        modal.style.display = "block";
+    }
 
+    // Persist form inputs in localStorage
     const saveFormData = () => {
         const data = {};
         form.querySelectorAll("input, select, textarea").forEach(el => {
-            if (el.type === "file") return;
-            if (el.type === "checkbox") data[el.name + "_" + el.value] = el.checked;
-            else data[el.name] = el.value;
+            if (el.type === "file") return; // ⬅ skip file inputs
+            if (el.type === "checkbox") {
+                data[el.name + "_" + el.value] = el.checked;
+            } else {
+                data[el.name] = el.value;
+            }
         });
         localStorage.setItem("walkinFormData", JSON.stringify(data));
     };
@@ -431,21 +408,27 @@ document.addEventListener("DOMContentLoaded", () => {
     const loadFormData = () => {
         const data = JSON.parse(localStorage.getItem("walkinFormData") || "{}");
         form.querySelectorAll("input, select, textarea").forEach(el => {
-            if (el.type === "file") return;
-            if (el.type === "checkbox") el.checked = data[el.name + "_" + el.value] || false;
-            else el.value = data[el.name] || "";
+            if (el.type === "file") return; // ⬅ skip file inputs
+            if (el.type === "checkbox") {
+                el.checked = data[el.name + "_" + el.value] || false;
+            } else {
+                el.value = data[el.name] || "";
+            }
         });
     };
 
     form.addEventListener("input", saveFormData);
     loadFormData();
 
+    // Intercept form submit to show confirmation modal
     form.addEventListener("submit", (e) => {
-        e.preventDefault();
+        e.preventDefault(); // stop default submission
+
+        // Gather form data for preview
         const formData = new FormData(form);
         let html = "<ul>";
         for (const [key, value] of formData.entries()) {
-            if (key === "attachment[]" || key === "documents[]") continue;
+            if (key === "attachment[]" || key === "documents[]") continue; // ⬅ skip files + documents in loop
             html += `<li><strong>${key}:</strong> ${value}</li>`;
         }
         const documents = formData.getAll("documents[]");
@@ -453,16 +436,19 @@ document.addEventListener("DOMContentLoaded", () => {
         html += "</ul>";
 
         confirmDetails.innerHTML = html;
-        confirmModal.style.display = "block";
+        confirmModal.style.display = "block"; // show confirmation modal
     });
 
+    // Confirmation modal buttons
     confirmClose.addEventListener("click", () => confirmModal.style.display = "none");
     confirmCancel.addEventListener("click", () => confirmModal.style.display = "none");
     confirmSubmit.addEventListener("click", () => {
         confirmModal.style.display = "none";
-        form.submit();
-        showFlashMessage('Walk-in request submitted successfully!', 'success');
+        form.submit(); // finally submit
     });
 
-    window.addEventListener("click", (e) => { if (e.target === confirmModal) confirmModal.style.display = "none"; });
+    // Close confirmation modal if clicked outside
+    window.addEventListener("click", (e) => {
+        if (e.target === confirmModal) confirmModal.style.display = "none";
+    });
 });
