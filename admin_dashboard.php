@@ -84,7 +84,7 @@ $staff_completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <img src="assets/fatimalogo.jpg" class="brand-logo" alt="Logo">
         <div>
             <span class="brand-title">Admin Dashboard</span>
-            <span class="brand-sub">Welcome <?php echo htmlspecialchars($user_name); ?></span>
+            <span class="brand-sub">Welcome, <?php echo htmlspecialchars($user_name); ?></span>
         </div>
     </div>
 

@@ -39,7 +39,7 @@ $completedRequests = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <span class="image"><img src="assets/fatimalogo.jpg" alt="logo"></span>
             <div class="text header-text">
                 <span class="profession">Staff Dashboard</span>
-                <span class="name"><?= $full_name ?></span>
+                <span class="name"><?php echo htmlspecialchars($full_name); ?></span>
             </div>
         </div>
         <hr>
@@ -49,12 +49,12 @@ $completedRequests = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <ul class="menu-links">
                 <li class="nav-link"><button class="tablinks"><a href="staff_dashboard.php" class="tablinks">Dashboard</a></button></li>
                 <li class="nav-link"><button class="tablinks"><a href="staff_requests.php" class="tablinks">Requests</a></button></li>
-                <li class="nav-link"><button class="tablinks"><a href="now_serving.php" class="tablinks">Now Serving</a></button></li>
-                <li class="nav-link active"><button class="tablinks"><a href="archive.php" class="tablinks">Archive</a></button></li>
+                <li class="nav-link"><button class="tablinks"><a href="now_serving.php" class="tablinks">Serving</a></button></li>
+                <li class="nav-link"><button class="tablinks"><a href="archive.php" class="tablinks">Archive</a></button></li>
             </ul>
         </div>
         <div class="bottom-content">
-            <li class="nav-link"><button class="tablinks"><a href="logout_staff.php" class="tablinks">Logout</a></button></li>
+            <li class="nav-link"><button class="tablinks"><a href="logout_user.php" class="tablinks">Logout</a></button></li>
         </div>
     </div>
 </nav>
