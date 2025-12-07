@@ -136,11 +136,39 @@ function displayAttachment(attachmentData) {
     if (typeof attachmentData === 'object' && attachmentData.url) {
         url = attachmentData.url;
     } else if (typeof attachmentData === 'string') {
-        // Clean up URL string - remove quotes, brackets, etc.
-        url = attachmentData.replace(/["\[\]]/g, '').trim();
+        // Aggressively clean up URL string
+        url = attachmentData;
+
+        // Remove all quotes, brackets, apostrophes
+        url = url.replace(/["'\[\]]/g, '');
+
+        // If it's still JSON-like, try parsing it
+        if (url.startsWith('{') || url.startsWith('[')) {
+            try {
+                const parsed = JSON.parse(url);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    url = parsed[0];
+                } else if (typeof parsed === 'string') {
+                    url = parsed;
+                } else if (parsed.url) {
+                    url = parsed.url;
+                }
+            } catch (e) {
+                // Continue with current url
+            }
+        }
+
+        // Final cleanup - remove any remaining special characters
+        url = url.replace(/["'\[\]]/g, '').trim();
     }
 
     if (!url) return;
+
+    // Ensure URL doesn't have encoded brackets
+    url = decodeURIComponent(url);
+    url = url.replace(/\[|\]/g, '');
+
+    console.log('Final clean URL:', url);
 
     // Check if it's an image by URL extension
     if (isImageFile(url)) {
@@ -158,6 +186,8 @@ function displayAttachment(attachmentData) {
 function parseAttachments(attachmentString) {
     if (!attachmentString) return [];
 
+    console.log('Raw attachment string:', attachmentString);
+
     // First, try to parse as JSON
     try {
         let parsed = JSON.parse(attachmentString);
@@ -171,27 +201,62 @@ function parseAttachments(attachmentString) {
             }
         }
 
+        console.log('Parsed object:', parsed);
+
         if (Array.isArray(parsed)) {
             // Map each item to extract clean URLs
             return parsed.map(item => {
                 if (typeof item === 'string') {
-                    // Clean URL string - remove any quotes or brackets
-                    return item.replace(/["'\[\]]/g, '').trim();
+                    // Aggressively clean URL string
+                    let cleanUrl = item;
+                    // Remove quotes, apostrophes, brackets
+                    cleanUrl = cleanUrl.replace(/["'\[\]]/g, '');
+                    // Remove any encoded brackets
+                    cleanUrl = cleanUrl.replace(/%22|%5B|%5D/g, '');
+                    // Decode URI components
+                    try {
+                        cleanUrl = decodeURIComponent(cleanUrl);
+                    } catch (e) {
+                        // Keep as is if decode fails
+                    }
+                    return cleanUrl.trim();
                 } else if (typeof item === 'object' && item.url) {
                     return item.url;
                 }
                 return item;
             }).filter(item => item);
         } else if (typeof parsed === 'string') {
-            // Single URL - clean it
-            return [parsed.replace(/["'\[\]]/g, '').trim()];
+            // Single URL - clean it aggressively
+            let cleanUrl = parsed;
+            cleanUrl = cleanUrl.replace(/["'\[\]]/g, '');
+            cleanUrl = cleanUrl.replace(/%22|%5B|%5D/g, '');
+            try {
+                cleanUrl = decodeURIComponent(cleanUrl);
+            } catch (e) {
+                // Keep as is if decode fails
+            }
+            return [cleanUrl.trim()];
         } else if (typeof parsed === 'object' && parsed.url) {
             return [parsed.url];
         }
         return [];
     } catch (e) {
-        // Not JSON - try comma-separated URLs
-        return attachmentString.split(',').map(a => a.trim()).filter(a => a);
+        console.log('Parse error, trying fallback:', e);
+        // Not JSON - try to extract URL directly
+        let cleanUrl = attachmentString;
+        // Remove all quotes, brackets, apostrophes
+        cleanUrl = cleanUrl.replace(/["'\[\]]/g, '');
+        cleanUrl = cleanUrl.replace(/%22|%5B|%5D/g, '');
+        try {
+            cleanUrl = decodeURIComponent(cleanUrl);
+        } catch (e) {
+            // Keep as is if decode fails
+        }
+        // If comma-separated, split
+        if (cleanUrl.includes(',')) {
+            return cleanUrl.split(',').map(a => a.trim()).filter(a => a);
+        }
+        return [cleanUrl.trim()].filter(a => a);
     }
 }
 
@@ -231,8 +296,22 @@ document.addEventListener('click', function (e) {
             // Get clean URL (already cleaned by parseAttachments)
             let cleanUrl = typeof att === 'string' ? att : (att.url || '');
 
-            // Double-check: Remove any remaining quotes, brackets, or extra characters
-            cleanUrl = cleanUrl.replace(/["'\[\]]/g, '').trim();
+            // Triple-check: Remove any remaining quotes, brackets, or encoded characters
+            cleanUrl = cleanUrl.replace(/["'\[\]]/g, '');
+            cleanUrl = cleanUrl.replace(/%22|%5B|%5D/g, '');
+
+            // Decode if needed
+            try {
+                cleanUrl = decodeURIComponent(cleanUrl);
+                // Clean again after decode
+                cleanUrl = cleanUrl.replace(/["'\[\]]/g, '');
+            } catch (e) {
+                // Keep as is
+            }
+
+            cleanUrl = cleanUrl.trim();
+
+            console.log(`Attachment ${index + 1} clean URL:`, cleanUrl);
 
             // Store clean URL directly
             option.value = cleanUrl;
@@ -243,9 +322,22 @@ document.addEventListener('click', function (e) {
             attachmentSelector.appendChild(option);
         });
 
-        // Display first attachment with clean URL
-        const firstUrl = attachments[0];
-        const cleanFirstUrl = typeof firstUrl === 'string' ? firstUrl.replace(/["'\[\]]/g, '').trim() : (firstUrl.url || firstUrl);
+        // Display first attachment with ultra-clean URL
+        let firstUrl = attachments[0];
+        let cleanFirstUrl = typeof firstUrl === 'string' ? firstUrl : (firstUrl.url || firstUrl);
+
+        // Remove all quotes, brackets, and encoded characters
+        cleanFirstUrl = cleanFirstUrl.replace(/["'\[\]]/g, '');
+        cleanFirstUrl = cleanFirstUrl.replace(/%22|%5B|%5D/g, '');
+        try {
+            cleanFirstUrl = decodeURIComponent(cleanFirstUrl);
+            cleanFirstUrl = cleanFirstUrl.replace(/["'\[\]]/g, '');
+        } catch (e) {
+            // Keep as is
+        }
+        cleanFirstUrl = cleanFirstUrl.trim();
+
+        console.log('Displaying first URL:', cleanFirstUrl);
         displayAttachment(cleanFirstUrl);
 
         lightboxOverlay.style.display = 'flex';
