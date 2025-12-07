@@ -114,66 +114,29 @@ $completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <div class="container" data-department="<?php echo htmlspecialchars($staff_departments[0] ?? 0); ?>">
     <!-- Queueing Column -->
-    <div class="column" id="queueing-column">
+    <div class="column">
         <h2>Queueing</h2>
-        <?php foreach($queueing as $req): ?>
-        <div class="card" id="req-<?php echo $req['id']; ?>">
-            <span><strong>ID:</strong> <span class="value"><?php echo $req['id']; ?></span></span>
-            <span><strong>Name:</strong> <span class="value"><?php echo htmlspecialchars($req['first_name'].' '.$req['last_name']); ?></span></span>
-            <span><strong>Documents:</strong> <span class="value"><?php echo htmlspecialchars($req['documents']); ?></span></span>
-            <span><strong>Notes:</strong> <span class="value"><?php echo htmlspecialchars($req['notes']); ?></span></span>
-            <span><strong>Status:</strong> <span class="value"><?php echo htmlspecialchars($req['status']); ?></span></span>
-            <div class="actions">
-                <button class="btn-serve" data-id="<?php echo $req['id']; ?>">Serve</button>
-            </div>
+        <div id="queueing-column">
+            <!-- JavaScript will populate this -->
         </div>
-        <?php endforeach; ?>
     </div>
 
     <!-- Serving Column -->
-    <div class="column" id="serving-column">
+    <div class="column">
         <h2>Serving</h2>
-        <?php foreach($serving as $req): ?>
-        <div class="card" id="req-<?php echo $req['id']; ?>">
-            <span><strong>ID:</strong> <span class="value"><?php echo $req['id']; ?></span></span>
-            <span><strong>Name:</strong> <span class="value"><?php echo htmlspecialchars($req['first_name'].' '.$req['last_name']); ?></span></span>
-            <span><strong>Documents:</strong> <span class="value"><?php echo htmlspecialchars($req['documents']); ?></span></span>
-            <span><strong>Notes:</strong> <span class="value"><?php echo htmlspecialchars($req['notes']); ?></span></span>
-            <span><strong>Status:</strong> <span class="value"><?php echo htmlspecialchars($req['status']); ?></span></span>
-
-            <?php if(!empty($req['queueing_num'])): ?>
-                <span class="queue-number"><strong>Queue #:</strong> <?php echo $req['queueing_num']; ?></span>
-            <?php endif; ?>
-
-            <?php if(!empty($req['serving_position'])): ?>
-                <span class="position"><strong>Position:</strong> <?php echo $req['serving_position']; ?></span>
-            <?php endif; ?>
-
-            <div class="actions">
-                <button class="btn-back" data-id="<?php echo $req['id']; ?>">Back</button>
-                <button class="btn-claim" data-id="<?php echo $req['id']; ?>">Claim</button>
-            </div>
+        <div id="serving-column">
+            <!-- JavaScript will populate this -->
         </div>
-        <?php endforeach; ?>
     </div>
 
     <!-- Completed Column -->
     <div class="column" id="completed-column">
         <div class="completed-header">
-    <h2 id="completed-title">Completed</h2>
-    <input type="date" id="completed-date-picker" style="margin-left: 20px;">
-</div>
+            <h2 id="completed-title">Completed</h2>
+            <input type="date" id="completed-date-picker" style="margin-left: 20px;">
+        </div>
         <div id="completed-list">
-        <?php foreach($completed as $req): ?>
-            <div class="card" id="req-<?php echo $req['id']; ?>">
-                <span><strong>ID:</strong> <span class="value"><?php echo $req['id']; ?></span></span>
-                <span><strong>Name:</strong> <span class="value"><?php echo htmlspecialchars($req['first_name'].' '.$req['last_name']); ?></span></span>
-                <span><strong>Documents:</strong> <span class="value"><?php echo htmlspecialchars($req['documents']); ?></span></span>
-                <span><strong>Notes:</strong> <span class="value"><?php echo htmlspecialchars($req['notes']); ?></span></span>
-                <span><strong>Status:</strong> <span class="value"><?php echo htmlspecialchars($req['status']); ?></span></span>
-                <span>Claimed / Completed</span>
-            </div>
-        <?php endforeach; ?>
+            <!-- JavaScript will populate this -->
         </div>
     </div>
 </div>

@@ -168,7 +168,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ================= INITIAL LOAD ================= */
-  refreshAll();
+  // Wait a moment to ensure DOM is ready, then do first refresh
+  setTimeout(() => {
+    refreshAll();
+  }, 100);
 
   /* ================= AUTO REFRESH EVERY 5 SECONDS ================= */
   setInterval(() => {

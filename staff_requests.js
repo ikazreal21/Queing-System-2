@@ -195,14 +195,22 @@ document.addEventListener('click', function (e) {
         attachmentSelector.innerHTML = '';
         attachments.forEach((att, index) => {
             const option = document.createElement('option');
-            option.value = JSON.stringify(att); // Store the full object as JSON
+            
+            // Store the attachment data properly
+            if (typeof att === 'object') {
+                option.value = att.url || JSON.stringify(att);
+                option.dataset.attachmentData = JSON.stringify(att);
+            } else {
+                option.value = att;
+                option.dataset.attachmentData = att;
+            }
 
             // Display name
             let displayName = '';
             if (typeof att === 'object') {
                 displayName = att.original_name || `Attachment ${index + 1}`;
             } else {
-                displayName = attachments.length > 1 ? `Attachment ${index + 1}` : att;
+                displayName = attachments.length > 1 ? `Attachment ${index + 1}` : `Attachment ${index + 1}`;
             }
 
             option.textContent = displayName;
@@ -221,14 +229,14 @@ document.addEventListener('click', function (e) {
 });
 
 attachmentSelector.addEventListener('change', () => {
-    const selected = attachmentSelector.value;
-    if (selected) {
+    const selectedOption = attachmentSelector.options[attachmentSelector.selectedIndex];
+    if (selectedOption && selectedOption.dataset.attachmentData) {
         try {
-            const attachmentData = JSON.parse(selected);
+            const attachmentData = JSON.parse(selectedOption.dataset.attachmentData);
             displayAttachment(attachmentData);
         } catch (e) {
-            // Fallback for old format
-            displayAttachment(selected);
+            // Fallback for direct URL string
+            displayAttachment(selectedOption.dataset.attachmentData);
         }
     }
 });
