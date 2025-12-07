@@ -30,13 +30,13 @@ function showInputModal(title = "Enter reason") {
             cancelBtn.removeEventListener('click', cancelHandler);
         };
 
-        const submitHandler = () => { 
-            cleanup(); 
-            resolve(textarea.value.trim() || "No reason provided"); 
+        const submitHandler = () => {
+            cleanup();
+            resolve(textarea.value.trim() || "No reason provided");
         };
-        const cancelHandler = () => { 
-            cleanup(); 
-            resolve(null); 
+        const cancelHandler = () => {
+            cleanup();
+            resolve(null);
         };
 
         submitBtn.addEventListener('click', submitHandler);
@@ -52,7 +52,7 @@ function showInputModal(title = "Enter reason") {
         });
     });
 }
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     const target = e.target;
     const row = target.closest('tr');
     const requestId = row?.dataset.requestId;
@@ -68,10 +68,10 @@ document.addEventListener('click', function(e) {
             if (reason === null) return;
 
             const declineReason = reason.trim() === '' ? 'No reason provided' : reason.trim();
-            const res = await postRequest('update_request.php', { 
-                request_id: requestId, 
-                action: 'decline', 
-                reason: declineReason 
+            const res = await postRequest('update_request.php', {
+                request_id: requestId,
+                action: 'decline',
+                reason: declineReason
             });
             if (!res.success) return showFlashMessage(res.message || 'Failed to decline request', 'error');
 
@@ -130,56 +130,64 @@ const attachmentSelector = document.getElementById('attachmentSelector');
 const closeLightbox = document.getElementById('closeLightbox');
 
 function displayAttachment(attachmentData) {
-    let url = attachmentData;
-    
-    // If it's an object with url property, extract the URL
+    let url = '';
+
+    // Handle Cloudinary JSON format with url property
     if (typeof attachmentData === 'object' && attachmentData.url) {
         url = attachmentData.url;
+    } else if (typeof attachmentData === 'string') {
+        // Direct URL string
+        url = attachmentData;
     }
-    
-    // Determine file type from URL or filename
-    let ext = '';
-    if (typeof attachmentData === 'object' && attachmentData.file_type) {
-        ext = attachmentData.file_type.toLowerCase();
-    } else {
-        ext = url.split('.').pop().toLowerCase().split('?')[0]; // Remove query params if any
-    }
-    
-    if (ext === 'pdf') {
-        lightboxImage.style.display = 'none';
-        lightboxPDF.style.display = 'block';
-        lightboxPDF.src = url;
-    } else {
+
+    if (!url) return;
+
+    // Check if it's an image by URL extension
+    if (isImageFile(url)) {
         lightboxPDF.style.display = 'none';
         lightboxImage.style.display = 'block';
         lightboxImage.src = url;
+    } else {
+        // For PDFs
+        lightboxImage.style.display = 'none';
+        lightboxPDF.style.display = 'block';
+        lightboxPDF.src = url;
     }
 }
 
 function parseAttachments(attachmentString) {
     if (!attachmentString) return [];
-    
+
     try {
-        // Try to parse as JSON first (new Cloudinary format)
+        // Try to parse as JSON first (Cloudinary format)
         const parsed = JSON.parse(attachmentString);
         if (Array.isArray(parsed)) {
             return parsed;
         }
-        return [parsed]; // Single object
+        return [parsed];
     } catch (e) {
-        // Fallback: treat as comma-separated filenames (old format)
-        return attachmentString.split(',').map(a => {
-            const trimmed = a.trim();
-            return trimmed ? { url: 'uploads/' + trimmed, original_name: trimmed } : null;
-        }).filter(a => a);
+        // Fallback: comma-separated URLs (old format)
+        return attachmentString.split(',').map(a => a.trim()).filter(a => a);
     }
 }
 
-document.addEventListener('click', function(e) {
+function getFileExtension(url) {
+    // Extract extension from URL (handle Cloudinary URLs with query params)
+    const path = url.split('?')[0]; // Remove query parameters
+    const extension = path.split('.').pop().toLowerCase();
+    return extension;
+}
+
+function isImageFile(url) {
+    const ext = getFileExtension(url);
+    return ['jpg', 'jpeg', 'png'].includes(ext);
+}
+
+document.addEventListener('click', function (e) {
     if (e.target && e.target.classList.contains('view-btn')) {
         const attachmentString = e.target.dataset.attachment;
         const attachments = parseAttachments(attachmentString);
-        
+
         if (attachments.length === 0) return;
 
         console.log('Parsed Attachments:', attachments);
@@ -188,7 +196,7 @@ document.addEventListener('click', function(e) {
         attachments.forEach((att, index) => {
             const option = document.createElement('option');
             option.value = JSON.stringify(att); // Store the full object as JSON
-            
+
             // Display name
             let displayName = '';
             if (typeof att === 'object') {
@@ -196,11 +204,11 @@ document.addEventListener('click', function(e) {
             } else {
                 displayName = attachments.length > 1 ? `Attachment ${index + 1}` : att;
             }
-            
+
             option.textContent = displayName;
             attachmentSelector.appendChild(option);
         });
-        
+
         displayAttachment(attachments[0]);
         lightboxOverlay.style.display = 'flex';
     }
@@ -308,9 +316,9 @@ function setupClaimDateInputs() {
             if (!requestId || !claimDate) return;
 
             try {
-                const res = await postRequest('update_request.php', { 
-                    request_id: requestId, 
-                    action: 'update_claim_date', 
+                const res = await postRequest('update_request.php', {
+                    request_id: requestId,
+                    action: 'update_claim_date',
                     claim_date: claimDate
                 });
 
@@ -329,7 +337,7 @@ function setupClaimDateInputs() {
 setupClaimDateInputs();
 
 /* =================== APPROVE / FINISH / PENDING / DECLINE BUTTONS =================== */
-document.addEventListener('click', async function(e) {
+document.addEventListener('click', async function (e) {
     const target = e.target;
     const row = target.closest('tr');
     const requestId = row?.dataset.requestId;

@@ -179,9 +179,6 @@ $completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <script src="now_serving.js"></script>
-<script>
-  setInterval(() => location.reload(), 1500); // reload every 1.5 seconds
-</script>
 
 </body>
 </html>

@@ -21,6 +21,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ================= FETCH COMPLETED BY DATE ================= */
+  // Set today's date as default
+  if (completedPicker && !completedPicker.value) {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    completedPicker.value = `${year}-${month}-${day}`;
+  }
+
   completedPicker.addEventListener("change", () => {
     refreshCompleted();
   });
@@ -52,10 +61,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const action = btn.classList.contains("btn-serve")
       ? "serve"
       : btn.classList.contains("btn-back")
-      ? "back"
-      : btn.classList.contains("btn-claim")
-      ? "complete"
-      : null;
+        ? "back"
+        : btn.classList.contains("btn-claim")
+          ? "complete"
+          : null;
 
     if (!action) return;
 
@@ -135,25 +144,22 @@ document.addEventListener("DOMContentLoaded", () => {
         <span><strong>Documents:</strong> ${req.documents}</span>
         <span><strong>Notes:</strong> ${req.notes}</span>
         <span><strong>Status:</strong> ${req.status}</span>
-        ${
-          req.queueing_num
-            ? `<span class="queue-number"><strong>Queue #:</strong> ${req.queueing_num}</span>`
-            : ""
+        ${req.queueing_num
+          ? `<span class="queue-number"><strong>Queue #:</strong> ${req.queueing_num}</span>`
+          : ""
         }
-        ${
-          req.serving_position
-            ? `<span class="position"><strong>Position:</strong> ${req.serving_position}</span>`
-            : ""
+        ${req.serving_position
+          ? `<span class="position"><strong>Position:</strong> ${req.serving_position}</span>`
+          : ""
         }
         <div class="actions">
-          ${
-            type === "queueing"
-              ? `<button class="btn btn-serve" data-id="${req.id}">Serve</button>`
-              : type === "serving"
-              ? `<button class="btn btn-back" data-id="${req.id}">Back</button>
+          ${type === "queueing"
+          ? `<button class="btn btn-serve" data-id="${req.id}">Serve</button>`
+          : type === "serving"
+            ? `<button class="btn btn-back" data-id="${req.id}">Back</button>
                  <button class="btn btn-claim" data-id="${req.id}">Complete</button>`
-              : ""
-          }
+            : ""
+        }
         </div>
       `;
 
@@ -163,4 +169,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /* ================= INITIAL LOAD ================= */
   refreshAll();
+
+  /* ================= AUTO REFRESH EVERY 5 SECONDS ================= */
+  setInterval(() => {
+    refreshAll();
+  }, 5000); // refresh data every 5 seconds
 });

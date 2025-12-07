@@ -145,9 +145,21 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             return [parsed];
         } catch (e) {
-            // Fallback: comma-separated filenames (old format)
+            // Fallback: comma-separated URLs (old format)
             return attachmentString.split(',').map(a => a.trim()).filter(a => a);
         }
+    }
+
+    function getFileExtension(url) {
+        // Extract extension from URL (handle Cloudinary URLs with query params)
+        const path = url.split('?')[0]; // Remove query parameters
+        const extension = path.split('.').pop().toLowerCase();
+        return extension;
+    }
+
+    function isImageFile(url) {
+        const ext = getFileExtension(url);
+        return ['jpg', 'jpeg', 'png'].includes(ext);
     }
 
     function attachViewListeners() {
@@ -163,36 +175,43 @@ document.addEventListener("DOMContentLoaded", function () {
                         div.style.marginBottom = "15px";
                         div.style.textAlign = "center";
                         
-                        // Handle Cloudinary JSON format
+                        let url = '';
+                        
+                        // Handle Cloudinary JSON format with url property
                         if (typeof att === 'object' && att.url) {
-                            // Show thumbnail/preview for images
-                            if (att.file_type && ['jpg', 'jpeg', 'png'].includes(att.file_type.toLowerCase())) {
+                            url = att.url;
+                        } else if (typeof att === 'string') {
+                            // Direct URL string
+                            url = att;
+                        }
+                        
+                        if (url) {
+                            // Check if it's an image by URL extension
+                            if (isImageFile(url)) {
+                                // Display image preview
                                 const img = document.createElement("img");
-                                img.src = att.url;
+                                img.src = url;
                                 img.style.maxWidth = "100%";
                                 img.style.maxHeight = "400px";
                                 img.style.borderRadius = "8px";
                                 img.style.cursor = "pointer";
                                 img.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
-                                img.onclick = () => window.open(att.url, '_blank');
+                                img.onclick = () => window.open(url, '_blank');
                                 div.appendChild(img);
-                            } else if (att.file_type && att.file_type.toLowerCase() === 'pdf') {
-                                // Show PDF icon/button
-                                const pdfBtn = document.createElement("button");
-                                pdfBtn.textContent = "📄 View PDF";
-                                pdfBtn.style.padding = "10px 20px";
-                                pdfBtn.style.fontSize = "16px";
-                                pdfBtn.style.backgroundColor = "#008c45";
-                                pdfBtn.style.color = "white";
-                                pdfBtn.style.border = "none";
-                                pdfBtn.style.borderRadius = "6px";
-                                pdfBtn.style.cursor = "pointer";
-                                pdfBtn.onclick = () => window.open(att.url, '_blank');
-                                div.appendChild(pdfBtn);
+                            } else {
+                                // For PDFs or other files, show a button
+                                const fileBtn = document.createElement("button");
+                                fileBtn.textContent = "📄 View File";
+                                fileBtn.style.padding = "10px 20px";
+                                fileBtn.style.fontSize = "16px";
+                                fileBtn.style.backgroundColor = "#008c45";
+                                fileBtn.style.color = "white";
+                                fileBtn.style.border = "none";
+                                fileBtn.style.borderRadius = "6px";
+                                fileBtn.style.cursor = "pointer";
+                                fileBtn.onclick = () => window.open(url, '_blank');
+                                div.appendChild(fileBtn);
                             }
-                        } else {
-                            // Old format: local file path - redirect directly to uploads
-                            window.open("uploads/" + att, '_blank');
                         }
                         
                         attachmentContainer.appendChild(div);
