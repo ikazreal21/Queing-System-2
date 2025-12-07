@@ -160,36 +160,39 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (attachments.length > 0) {
                     attachments.forEach((att, index) => {
                         const div = document.createElement("div");
-                        div.style.marginBottom = "10px";
+                        div.style.marginBottom = "15px";
+                        div.style.textAlign = "center";
                         
                         // Handle Cloudinary JSON format
                         if (typeof att === 'object' && att.url) {
-                            const a = document.createElement("a");
-                            a.href = att.url;
-                            a.target = "_blank";
-                            a.textContent = att.original_name || `Attachment ${index + 1}`;
-                            a.style.display = "block";
-                            div.appendChild(a);
-                            
-                            // Show thumbnail for images
+                            // Show thumbnail/preview for images
                             if (att.file_type && ['jpg', 'jpeg', 'png'].includes(att.file_type.toLowerCase())) {
                                 const img = document.createElement("img");
                                 img.src = att.url;
-                                img.style.maxWidth = "200px";
-                                img.style.marginTop = "8px";
-                                img.style.borderRadius = "6px";
+                                img.style.maxWidth = "100%";
+                                img.style.maxHeight = "400px";
+                                img.style.borderRadius = "8px";
                                 img.style.cursor = "pointer";
+                                img.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
                                 img.onclick = () => window.open(att.url, '_blank');
                                 div.appendChild(img);
+                            } else if (att.file_type && att.file_type.toLowerCase() === 'pdf') {
+                                // Show PDF icon/button
+                                const pdfBtn = document.createElement("button");
+                                pdfBtn.textContent = "📄 View PDF";
+                                pdfBtn.style.padding = "10px 20px";
+                                pdfBtn.style.fontSize = "16px";
+                                pdfBtn.style.backgroundColor = "#008c45";
+                                pdfBtn.style.color = "white";
+                                pdfBtn.style.border = "none";
+                                pdfBtn.style.borderRadius = "6px";
+                                pdfBtn.style.cursor = "pointer";
+                                pdfBtn.onclick = () => window.open(att.url, '_blank');
+                                div.appendChild(pdfBtn);
                             }
                         } else {
-                            // Old format: local file path
-                            const a = document.createElement("a");
-                            a.href = "uploads/" + att;
-                            a.target = "_blank";
-                            a.textContent = att;
-                            a.style.display = "block";
-                            div.appendChild(a);
+                            // Old format: local file path - redirect directly to uploads
+                            window.open("uploads/" + att, '_blank');
                         }
                         
                         attachmentContainer.appendChild(div);
