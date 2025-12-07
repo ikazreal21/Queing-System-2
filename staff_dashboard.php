@@ -348,7 +348,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         link.href = file;
                         link.target = "_blank";
                         link.className = "attachment-link";
-                        link.textContent = file;
+                        link.textContent = "Attachment";
                         link.style.display = "block";
                         link.style.marginBottom = "5px";
                         attachmentContainer.appendChild(link);
