@@ -136,8 +136,8 @@ function displayAttachment(attachmentData) {
     if (typeof attachmentData === 'object' && attachmentData.url) {
         url = attachmentData.url;
     } else if (typeof attachmentData === 'string') {
-        // Direct URL string
-        url = attachmentData;
+        // Clean up URL string - remove quotes, brackets, etc.
+        url = attachmentData.replace(/["\[\]]/g, '').trim();
     }
 
     if (!url) return;
@@ -158,15 +158,39 @@ function displayAttachment(attachmentData) {
 function parseAttachments(attachmentString) {
     if (!attachmentString) return [];
 
+    // First, try to parse as JSON
     try {
-        // Try to parse as JSON first (Cloudinary format)
-        const parsed = JSON.parse(attachmentString);
-        if (Array.isArray(parsed)) {
-            return parsed;
+        let parsed = JSON.parse(attachmentString);
+
+        // Handle double-encoded JSON strings (parse multiple times if needed)
+        while (typeof parsed === 'string') {
+            try {
+                parsed = JSON.parse(parsed);
+            } catch {
+                break; // If can't parse further, stop
+            }
         }
-        return [parsed];
+
+        if (Array.isArray(parsed)) {
+            // Map each item to extract clean URLs
+            return parsed.map(item => {
+                if (typeof item === 'string') {
+                    // Clean URL string - remove any quotes or brackets
+                    return item.replace(/["'\[\]]/g, '').trim();
+                } else if (typeof item === 'object' && item.url) {
+                    return item.url;
+                }
+                return item;
+            }).filter(item => item);
+        } else if (typeof parsed === 'string') {
+            // Single URL - clean it
+            return [parsed.replace(/["'\[\]]/g, '').trim()];
+        } else if (typeof parsed === 'object' && parsed.url) {
+            return [parsed.url];
+        }
+        return [];
     } catch (e) {
-        // Fallback: comma-separated URLs (old format)
+        // Not JSON - try comma-separated URLs
         return attachmentString.split(',').map(a => a.trim()).filter(a => a);
     }
 }
@@ -193,31 +217,37 @@ document.addEventListener('click', function (e) {
         console.log('Parsed Attachments:', attachments);
 
         attachmentSelector.innerHTML = '';
+
+        // Hide selector if only one attachment
+        if (attachments.length === 1) {
+            attachmentSelector.style.display = 'none';
+        } else {
+            attachmentSelector.style.display = 'block';
+        }
+
         attachments.forEach((att, index) => {
             const option = document.createElement('option');
-            
-            // Store the attachment data properly
-            if (typeof att === 'object') {
-                option.value = att.url || JSON.stringify(att);
-                option.dataset.attachmentData = JSON.stringify(att);
-            } else {
-                option.value = att;
-                option.dataset.attachmentData = att;
-            }
+
+            // Get clean URL (already cleaned by parseAttachments)
+            let cleanUrl = typeof att === 'string' ? att : (att.url || '');
+
+            // Double-check: Remove any remaining quotes, brackets, or extra characters
+            cleanUrl = cleanUrl.replace(/["'\[\]]/g, '').trim();
+
+            // Store clean URL directly
+            option.value = cleanUrl;
+            option.dataset.attachmentData = cleanUrl;
 
             // Display name
-            let displayName = '';
-            if (typeof att === 'object') {
-                displayName = att.original_name || `Attachment ${index + 1}`;
-            } else {
-                displayName = attachments.length > 1 ? `Attachment ${index + 1}` : `Attachment ${index + 1}`;
-            }
-
-            option.textContent = displayName;
+            option.textContent = `Attachment ${index + 1}`;
             attachmentSelector.appendChild(option);
         });
 
-        displayAttachment(attachments[0]);
+        // Display first attachment with clean URL
+        const firstUrl = attachments[0];
+        const cleanFirstUrl = typeof firstUrl === 'string' ? firstUrl.replace(/["'\[\]]/g, '').trim() : (firstUrl.url || firstUrl);
+        displayAttachment(cleanFirstUrl);
+
         lightboxOverlay.style.display = 'flex';
     }
 
@@ -231,13 +261,9 @@ document.addEventListener('click', function (e) {
 attachmentSelector.addEventListener('change', () => {
     const selectedOption = attachmentSelector.options[attachmentSelector.selectedIndex];
     if (selectedOption && selectedOption.dataset.attachmentData) {
-        try {
-            const attachmentData = JSON.parse(selectedOption.dataset.attachmentData);
-            displayAttachment(attachmentData);
-        } catch (e) {
-            // Fallback for direct URL string
-            displayAttachment(selectedOption.dataset.attachmentData);
-        }
+        // Data is already a clean URL string
+        const cleanUrl = selectedOption.dataset.attachmentData;
+        displayAttachment(cleanUrl);
     }
 });
 
