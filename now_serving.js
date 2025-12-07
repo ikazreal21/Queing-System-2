@@ -21,14 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ================= FETCH COMPLETED BY DATE ================= */
-  // Set today's date as default
-  if (completedPicker && !completedPicker.value) {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    completedPicker.value = `${year}-${month}-${day}`;
-  }
+  // Leave date picker empty by default (shows all completed requests)
 
   completedPicker.addEventListener("change", () => {
     refreshCompleted();

@@ -133,7 +133,7 @@ $completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="column" id="completed-column">
         <div class="completed-header">
             <h2 id="completed-title">Completed</h2>
-            <input type="date" id="completed-date-picker" style="margin-left: 20px;">
+            <input type="date" id="completed-date-picker" style="margin-left: 20px;" placeholder="All dates">
         </div>
         <div id="completed-list">
             <!-- JavaScript will populate this -->

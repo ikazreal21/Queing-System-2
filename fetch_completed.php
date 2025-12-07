@@ -7,20 +7,20 @@ $data = json_decode(file_get_contents('php://input'), true);
 $selectedDate = $data['completed_date'] ?? null;
 $departments = $data['departments'] ?? []; // array of allowed department IDs
 
-if (!$selectedDate) {
-    echo json_encode(['success' => false, 'message' => 'No date provided']);
-    exit;
-}
-
 try {
     // Base SQL
     $sql = "
         SELECT id, first_name, last_name, documents, attachment, completed_date, department
         FROM requests
         WHERE status = 'Completed'
-          AND DATE(completed_date) = :completed_date
     ";
-    $params = [':completed_date' => $selectedDate];
+    $params = [];
+
+    // Add date filter only if provided
+    if (!empty($selectedDate)) {
+        $sql .= " AND DATE(completed_date) = :completed_date";
+        $params[':completed_date'] = $selectedDate;
+    }
 
     // Add department filter if provided
     if (!empty($departments)) {
