@@ -98,7 +98,8 @@ $completedRequests = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <?php
                     $i = 1;
                     foreach ($completedRequests as $row) {
-                        $attachments = json_encode(array_map('trim', explode(',', $row['attachment'])));
+                        // Pass the raw attachment string - let JavaScript handle parsing
+                        $attachmentData = $row['attachment'] ? htmlspecialchars($row['attachment']) : '';
                         echo "<tr>";
                         echo "<td>" . $i++ . "</td>";
                         echo "<td>" . htmlspecialchars($row['first_name'] . " " . $row['last_name']) . "</td>";
@@ -108,7 +109,7 @@ $completedRequests = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         echo "<td>" . htmlspecialchars($row['last_semester']) . "</td>";
                         echo "<td>" . htmlspecialchars($row['documents']) . "</td>";
                         echo "<td>" . htmlspecialchars($row['notes']) . "</td>";
-                        echo "<td><button class='viewAttachments' data-request-attachments='".htmlspecialchars($attachments)."'>View</button></td>";
+                        echo "<td><button class='viewAttachments' data-request-attachments='" . $attachmentData . "'>View</button></td>";
                         echo "</tr>";
                     }
                     ?>
@@ -133,20 +134,65 @@ document.addEventListener("DOMContentLoaded", function () {
     const closeModal = modal.querySelector(".close");
     const attachmentContainer = document.getElementById("attachmentContainer");
 
+    function parseAttachments(attachmentString) {
+        if (!attachmentString) return [];
+        
+        try {
+            // Try to parse as JSON first (Cloudinary format)
+            const parsed = JSON.parse(attachmentString);
+            if (Array.isArray(parsed)) {
+                return parsed;
+            }
+            return [parsed];
+        } catch (e) {
+            // Fallback: comma-separated filenames (old format)
+            return attachmentString.split(',').map(a => a.trim()).filter(a => a);
+        }
+    }
+
     function attachViewListeners() {
         document.querySelectorAll(".viewAttachments").forEach(button => {
             button.onclick = function () {
                 attachmentContainer.innerHTML = '';
-                let attachments = [];
-                try { attachments = JSON.parse(button.dataset.requestAttachments); } catch(e){}
-                if (attachments.length > 0 && attachments[0] !== "") {
-                    attachments.forEach(file => {
-                        const a = document.createElement("a");
-                        a.href = "uploads/" + file;
-                        a.target = "_blank";
-                        a.textContent = file;
-                        a.style.display = "block";
-                        attachmentContainer.appendChild(a);
+                const attachmentString = button.dataset.requestAttachments;
+                const attachments = parseAttachments(attachmentString);
+                
+                if (attachments.length > 0) {
+                    attachments.forEach((att, index) => {
+                        const div = document.createElement("div");
+                        div.style.marginBottom = "10px";
+                        
+                        // Handle Cloudinary JSON format
+                        if (typeof att === 'object' && att.url) {
+                            const a = document.createElement("a");
+                            a.href = att.url;
+                            a.target = "_blank";
+                            a.textContent = att.original_name || `Attachment ${index + 1}`;
+                            a.style.display = "block";
+                            div.appendChild(a);
+                            
+                            // Show thumbnail for images
+                            if (att.file_type && ['jpg', 'jpeg', 'png'].includes(att.file_type.toLowerCase())) {
+                                const img = document.createElement("img");
+                                img.src = att.url;
+                                img.style.maxWidth = "200px";
+                                img.style.marginTop = "8px";
+                                img.style.borderRadius = "6px";
+                                img.style.cursor = "pointer";
+                                img.onclick = () => window.open(att.url, '_blank');
+                                div.appendChild(img);
+                            }
+                        } else {
+                            // Old format: local file path
+                            const a = document.createElement("a");
+                            a.href = "uploads/" + att;
+                            a.target = "_blank";
+                            a.textContent = att;
+                            a.style.display = "block";
+                            div.appendChild(a);
+                        }
+                        
+                        attachmentContainer.appendChild(div);
                     });
                 } else {
                     attachmentContainer.textContent = "No attachments.";
@@ -184,7 +230,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
                 let i = 1;
                 data.forEach(row => {
-                    const attachments = row.attachment ? row.attachment.split(',').map(f => f.trim()) : [];
+                    // Pass raw attachment string - let parseAttachments handle it
+                    const attachmentData = row.attachment || '';
                     const tr = document.createElement("tr");
                     tr.innerHTML = `
                         <td>${i++}</td>
@@ -195,7 +242,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         <td>${row.last_semester}</td>
                         <td>${row.documents}</td>
                         <td>${row.notes}</td>
-                        <td><button class='viewAttachments' data-request-attachments='${JSON.stringify(attachments)}'>View</button></td>
+                        <td><button class='viewAttachments' data-request-attachments='${attachmentData.replace(/'/g, "&apos;")}'>View</button></td>
                     `;
                     archiveTableBody.appendChild(tr);
                 });
