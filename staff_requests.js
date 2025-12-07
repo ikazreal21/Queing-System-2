@@ -129,31 +129,78 @@ const lightboxPDF = document.getElementById('lightboxPDF');
 const attachmentSelector = document.getElementById('attachmentSelector');
 const closeLightbox = document.getElementById('closeLightbox');
 
-function displayAttachment(filename) {
-    const ext = filename.split('.').pop().toLowerCase();
+function displayAttachment(attachmentData) {
+    let url = attachmentData;
+    
+    // If it's an object with url property, extract the URL
+    if (typeof attachmentData === 'object' && attachmentData.url) {
+        url = attachmentData.url;
+    }
+    
+    // Determine file type from URL or filename
+    let ext = '';
+    if (typeof attachmentData === 'object' && attachmentData.file_type) {
+        ext = attachmentData.file_type.toLowerCase();
+    } else {
+        ext = url.split('.').pop().toLowerCase().split('?')[0]; // Remove query params if any
+    }
+    
     if (ext === 'pdf') {
         lightboxImage.style.display = 'none';
         lightboxPDF.style.display = 'block';
-        lightboxPDF.src = 'uploads/' + filename;
+        lightboxPDF.src = url;
     } else {
         lightboxPDF.style.display = 'none';
         lightboxImage.style.display = 'block';
-        lightboxImage.src = 'uploads/' + filename;
+        lightboxImage.src = url;
+    }
+}
+
+function parseAttachments(attachmentString) {
+    if (!attachmentString) return [];
+    
+    try {
+        // Try to parse as JSON first (new Cloudinary format)
+        const parsed = JSON.parse(attachmentString);
+        if (Array.isArray(parsed)) {
+            return parsed;
+        }
+        return [parsed]; // Single object
+    } catch (e) {
+        // Fallback: treat as comma-separated filenames (old format)
+        return attachmentString.split(',').map(a => {
+            const trimmed = a.trim();
+            return trimmed ? { url: 'uploads/' + trimmed, original_name: trimmed } : null;
+        }).filter(a => a);
     }
 }
 
 document.addEventListener('click', function(e) {
     if (e.target && e.target.classList.contains('view-btn')) {
-        const attachments = e.target.dataset.attachment.split(',').map(a => a.trim()).filter(a => a);
+        const attachmentString = e.target.dataset.attachment;
+        const attachments = parseAttachments(attachmentString);
+        
         if (attachments.length === 0) return;
+
+        console.log('Parsed Attachments:', attachments);
 
         attachmentSelector.innerHTML = '';
         attachments.forEach((att, index) => {
             const option = document.createElement('option');
-            option.value = att;
-            option.textContent = attachments.length > 1 ? `Attachment ${index + 1}` : att;
+            option.value = JSON.stringify(att); // Store the full object as JSON
+            
+            // Display name
+            let displayName = '';
+            if (typeof att === 'object') {
+                displayName = att.original_name || `Attachment ${index + 1}`;
+            } else {
+                displayName = attachments.length > 1 ? `Attachment ${index + 1}` : att;
+            }
+            
+            option.textContent = displayName;
             attachmentSelector.appendChild(option);
         });
+        
         displayAttachment(attachments[0]);
         lightboxOverlay.style.display = 'flex';
     }
@@ -167,7 +214,15 @@ document.addEventListener('click', function(e) {
 
 attachmentSelector.addEventListener('change', () => {
     const selected = attachmentSelector.value;
-    if (selected) displayAttachment(selected);
+    if (selected) {
+        try {
+            const attachmentData = JSON.parse(selected);
+            displayAttachment(attachmentData);
+        } catch (e) {
+            // Fallback for old format
+            displayAttachment(selected);
+        }
+    }
 });
 
 /* =================== GENERIC POST FUNCTION =================== */
