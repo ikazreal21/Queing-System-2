@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (attachments.length > 0 && attachments[0] !== "") {
                 attachments.forEach(file => {
                     const a = document.createElement("a");
-                    a.href = file;
+                    a.href = "uploads/" + file;
                     a.target = "_blank";
                     a.textContent = file;
                     a.style.display = "block";
@@ -120,60 +120,80 @@ document.addEventListener("DOMContentLoaded", function () {
     const notifList = document.getElementById("notifList");
     const audio = new Audio("assets/notif.mp3");
 
-    const today = new Date().toISOString().slice(0, 10);
-
     // === DAILY RESET ===
+    const today = new Date().toISOString().split("T")[0];
     const lastDay = localStorage.getItem("notifLastDay");
+
     if (lastDay !== today) {
-        localStorage.setItem("notifLastDay", today);
         localStorage.removeItem("seenNotifications");
-        notifCount.textContent = "0";
+        localStorage.setItem("notifLastDay", today);
         notifList.innerHTML = "";
+        notifCount.textContent = "0";
     }
 
-    let seenIds = new Set(JSON.parse(localStorage.getItem("seenNotifications") || "[]"));
-    let fetchedData = [];
-    let soundInterval = null;
+    // === LOAD SEEN NOTIFICATION IDS ===
+    const knownRequestIds = new Set(
+        JSON.parse(localStorage.getItem("seenNotifications") || "[]")
+    );
 
+    const countedRequestIds = new Set(); // counted this session only
+    let newNotifications = 0;
+    let soundInterval = null;
+    let fetchedData = [];
+
+    // === FETCH NOTIFICATIONS ===
     function fetchNotifications() {
         fetch("notifications.php")
-            .then(r => r.json())
+            .then(res => res.json())
             .then(data => {
-                if (!Array.isArray(data)) return;
+                if (!Array.isArray(data) || data.length === 0) return;
 
-                // 🔥 TODAY ONLY
-                fetchedData = data.filter(
-                    req => req.created_at && req.created_at.slice(0, 10) === today
-                );
+                let newRequestFound = false;
 
-                // 🔥 COUNT = UNSEEN TODAY ONLY
-                const unseenToday = fetchedData.filter(
-                    req => !seenIds.has(req.id)
-                );
+                data.forEach(req => {
+                    // store fetched requests
+                    if (!fetchedData.some(d => d.id === req.id)) {
+                        fetchedData.push(req);
+                    }
 
-                notifCount.textContent = unseenToday.length;
+                    // count only unseen + not yet counted this session
+                    if (
+                        !knownRequestIds.has(req.id) &&
+                        !countedRequestIds.has(req.id)
+                    ) {
+                        newNotifications++;
+                        notifCount.textContent = newNotifications;
+                        notifBtn.style.color = "#008c45"; // green bell
+                        countedRequestIds.add(req.id);
+                        newRequestFound = true;
+                    }
+                });
 
-                if (unseenToday.length > 0) {
-                    notifBtn.style.color = "#008c45";
+                // play sound only if dropdown is closed
+                if (
+                    newRequestFound &&
+                    notifDropdown.style.display !== "block" &&
+                    !soundInterval
+                ) {
+                    audio.currentTime = 0;
+                    audio.play().catch(() => {});
 
-                    if (notifDropdown.style.display !== "block" && !soundInterval) {
+                    soundInterval = setInterval(() => {
                         audio.currentTime = 0;
                         audio.play().catch(() => {});
-                        soundInterval = setInterval(() => {
-                            audio.currentTime = 0;
-                            audio.play().catch(() => {});
-                        }, 5000);
-                    }
+                    }, 5000);
                 }
             })
-            .catch(() => {});
+            .catch(err => console.error(err));
     }
 
+    // === DROPDOWN TOGGLE ===
     notifBtn.addEventListener("click", () => {
         const isOpen = notifDropdown.style.display === "block";
         notifDropdown.style.display = isOpen ? "none" : "block";
 
         if (!isOpen) {
+            // stop sound
             if (soundInterval) {
                 clearInterval(soundInterval);
                 soundInterval = null;
@@ -185,24 +205,37 @@ document.addEventListener("DOMContentLoaded", function () {
                 const li = document.createElement("li");
                 li.dataset.id = req.id;
 
-                if (!seenIds.has(req.id)) li.classList.add("new-notif");
+                if (!knownRequestIds.has(req.id)) {
+                    li.classList.add("new-notif");
+                }
+
+                const type = req.walk_in == 1 ? "Walk-In" : "Online";
 
                 li.innerHTML = `
                     <div class="notif-user">${req.first_name} ${req.last_name}</div>
                     <div class="notif-type-dept">
-                        ${req.walk_in == 1 ? "Walk-In" : "Online"} - Dept: ${req.department}
+                        ${type} - Dept: ${req.department}
                     </div>
                 `;
 
                 notifList.prepend(li);
-                seenIds.add(req.id);
+                knownRequestIds.add(req.id);
             });
 
-            localStorage.setItem("seenNotifications", JSON.stringify([...seenIds]));
+            // persist seen notifications
+            localStorage.setItem(
+                "seenNotifications",
+                JSON.stringify([...knownRequestIds])
+            );
+
+            // reset counters
+            newNotifications = 0;
             notifCount.textContent = "0";
+            countedRequestIds.clear();
         }
     });
 
+    // === POLLING ===
     setInterval(fetchNotifications, 2000);
     fetchNotifications();
 });
