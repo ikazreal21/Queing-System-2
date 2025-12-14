@@ -137,7 +137,4 @@ document.addEventListener("DOMContentLoaded", () => {
       containerEl.appendChild(div);
     });
   }
-
-  // Initial load
-  refreshAll();
 });
