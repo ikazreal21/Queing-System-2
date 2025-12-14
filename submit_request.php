@@ -4,28 +4,33 @@ require "db.php"; // your PDO connection ($pdo)
 require "cloudinary_helper.php"; // Cloudinary helper class
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    try {
 
+    // DEFAULT flash message
+    $flash = [
+        "msg" => "",
+        "type" => "info"
+    ];
+
+    try {
         // Sanitize inputs
-        $first_name       = $_POST['first_name'] ?? '';
-        $last_name        = $_POST['last_name'] ?? '';
-        $student_number   = $_POST['student_number'] ?? '';
-        $section          = $_POST['section'] ?? '';
-        $department       = $_POST['department'] ?? ''; 
+        $first_name = $_POST['first_name'] ?? '';
+        $last_name = $_POST['last_name'] ?? '';
+        $student_number = $_POST['student_number'] ?? '';
+        $section = $_POST['section'] ?? '';
+        $department = $_POST['department'] ?? '';
         $last_school_year = $_POST['last_school_year'] ?? '';
-        $last_semester    = $_POST['last_semester'] ?? '';
-        $documents        = isset($_POST['documents']) ? implode(", ", $_POST['documents']) : '';
-        $notes            = $_POST['notes'] ?? '';
+        $last_semester = $_POST['last_semester'] ?? '';
+        $documents = isset($_POST['documents']) ? implode(", ", $_POST['documents']) : '';
+        $notes = $_POST['notes'] ?? '';
 
         $checkStmt = $pdo->prepare("
             SELECT status, attachment 
             FROM requests
             WHERE student_number = ?
-            AND DATE(created_at) = CURDATE()
+              AND DATE(created_at) = CURDATE()
             ORDER BY created_at DESC
             LIMIT 1
         ");
-        
         $checkStmt->execute([$student_number]);
 
         $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
@@ -46,43 +51,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $attachments = [];
         $status = "Declined"; // default if no attachment
 
-        // var_dump($_FILES['attachment']);
-
-        if (!empty($_FILES['attachment'])) {
-
+        if (!empty($_FILES['attachment']['name'][0])) {
             $cloudinary = new CloudinaryHelper();
             $allowedTypes = ["jpg", "jpeg", "png", "pdf"];
 
             foreach ($_FILES['attachment']['name'] as $key => $name) {
-                $fileTmp  = $_FILES['attachment']['tmp_name'][$key];
+                $fileTmp = $_FILES['attachment']['tmp_name'][$key];
                 $fileType = strtolower(pathinfo($name, PATHINFO_EXTENSION));
                 $fileSize = $_FILES['attachment']['size'][$key];
 
-
-                // echo "Processing file: $name, Type: $fileType, Size: $fileSize bytes\n";
-
                 // Validate file type
-                if (!in_array($fileType, $allowedTypes)) {
-                    continue; // Skip invalid file types
-                }
+                if (!in_array($fileType, $allowedTypes)) continue;
 
                 // Validate file size (max 10MB)
-                if ($fileSize > 10 * 1024 * 1024) {
-                    continue; // Skip files larger than 10MB
-                }
+                if ($fileSize > 10 * 1024 * 1024) continue;
 
                 // Validate uploaded file
-                if (!is_uploaded_file($fileTmp)) {
-                    continue; // Skip if not a valid uploaded file
-                }
+                if (!is_uploaded_file($fileTmp)) continue;
 
                 // Upload to Cloudinary
                 $uploadResult = $cloudinary->uploadFile($fileTmp, $name);
 
-                // echo "Upload result for $name: ";
-                // var_dump($uploadResult);
                 if ($uploadResult['success']) {
-                    $attachments[] = $uploadResult['url']; // ✅ fix: push into array
+                    $attachments[] = $uploadResult['url'];
                 } else {
                     error_log("Failed to upload file {$name}: " . $uploadResult['error']);
                 }
@@ -93,17 +84,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         }
 
-        // Convert attachments array to JSON string for database storage
+        // Convert attachments array to JSON string for database
         $attachmentStr = !empty($attachments) ? json_encode($attachments, JSON_UNESCAPED_SLASHES) : null;
 
-        // 🔹 FORCE ALL PROCESSING FIELDS TO NULL
-        $processing_time       = null;
-        $processing_start      = null;
-        $processing_deadline   = null;
-        $scheduled_date        = null;
-
-        // 🔹 FORCE QUEUE NUMBER AND SERVING POSITION TO NULL
-        $queueing_num     = null;
+        // FORCE NULL VALUES
+        $processing_time = null;
+        $processing_start = null;
+        $processing_deadline = null;
+        $scheduled_date = null;
+        $queueing_num = null;
         $serving_position = null;
 
         // Insert into DB
@@ -116,41 +105,46 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
-            ':first_name'         => $first_name,
-            ':last_name'          => $last_name,
-            ':student_number'     => $student_number,
-            ':section'            => $section,
-            ':department'         => $department,
-            ':last_school_year'   => $last_school_year,
-            ':last_semester'      => $last_semester,
-            ':documents'          => $documents,
-            ':notes'              => $notes,
-            ':attachment'         => $attachmentStr,
-            ':status'             => $status,
-            ':processing_time'    => $processing_time,
-            ':processing_start'   => $processing_start,
-            ':processing_deadline'=> $processing_deadline,
-            ':scheduled_date'     => $scheduled_date,
-            ':queueing_num'       => $queueing_num,
-            ':serving_position'   => $serving_position
+            ':first_name' => $first_name,
+            ':last_name' => $last_name,
+            ':student_number' => $student_number,
+            ':section' => $section,
+            ':department' => $department,
+            ':last_school_year' => $last_school_year,
+            ':last_semester' => $last_semester,
+            ':documents' => $documents,
+            ':notes' => $notes,
+            ':attachment' => $attachmentStr,
+            ':status' => $status,
+            ':processing_time' => $processing_time,
+            ':processing_start' => $processing_start,
+            ':processing_deadline' => $processing_deadline,
+            ':scheduled_date' => $scheduled_date,
+            ':queueing_num' => $queueing_num,
+            ':serving_position' => $serving_position
         ]);
 
-        // // Feedback
+        // Send flash message back
         if ($status === "Declined") {
-            echo "<script>
-                    alert('Your request was declined because no attachment was uploaded.');
-                    window.location.href = 'user_dashboard.php';
-                  </script>";
+            $flash["msg"] = "Your request was declined because no attachment was uploaded.";
+            $flash["type"] = "error";
         } else {
-            echo "<script>
-                    alert('Your request has been submitted successfully and is now Pending.');
-                    window.location.href = 'user_dashboard.php'; 
-                  </script>";
+            $flash["msg"] = "Your request has been submitted successfully and is now Pending.";
+            $flash["type"] = "success";
         }
 
+        $_SESSION["flash"] = $flash;
+        header("Location: user_dashboard.php");
+        exit();
+
     } catch (PDOException $e) {
-        die("Error: " . $e->getMessage());
+        $flash["msg"] = "Database Error: " . $e->getMessage();
+        $flash["type"] = "error";
+        $_SESSION["flash"] = $flash;
+        header("Location: user_dashboard.php");
+        exit();
     }
+
 } else {
     header("Location: user_dashboard.php");
     exit();
