@@ -1,155 +1,187 @@
-document.addEventListener("DOMContentLoaded", function () {
-  var container = document.querySelector(".container");
-  if (!container) return;
+<?php
+session_start();
+include('db.php'); // PDO connection
 
-  var department = container.dataset.department || 0;
-  var servingColumn = document.getElementById("serving-column");
-  var queueingColumn = document.getElementById("queueing-column");
-  var completedColumn = document.getElementById("completed-list");
-  var completedPicker = document.getElementById("completed-date-picker");
+// Make sure user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: index.php"); // redirect to login if not logged in
+    exit();
+}
 
-  /* ================= FLASH MESSAGE ================= */
-  function showFlashMessage(message, type) {
-    type = type || "success"; // default type
-    var flash = document.createElement("div");
-    flash.className = "flash-message " + type; // ✅ no backticks
-    flash.textContent = message;
-    document.body.appendChild(flash);
+// Fetch user info
+$stmt = $pdo->prepare("SELECT first_name, last_name, role FROM users WHERE id = ?");
+$stmt->execute([$_SESSION['user_id']]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    setTimeout(function () { flash.classList.add("show"); }, 10);
-    setTimeout(function () {
-      flash.classList.remove("show");
-      setTimeout(function () { flash.remove(); }, 300);
-    }, 3000);
-  }
+if (!$user) {
+    // If no user found, force logout
+    session_destroy();
+    header("Location: index.php");
+    exit();
+}
 
-  /* ================= FETCH COMPLETED ================= */
-  if (completedPicker) {
-    completedPicker.addEventListener("change", function () {
-      refreshCompleted();
-    });
-  }
+// ✅ Allow only staff accounts
+if ($user['role'] !== 'staff') {
+    header("Location: index.php"); // redirect if not staff
+    exit();
+}
 
-  function refreshCompleted() {
-    fetch("fetch_completed.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        completed_date: completedPicker.value || null,
-        department: department
-      })
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        if (data.success) renderList(completedColumn, data.requests, "completed");
-      })
-      .catch(function (err) { console.error("Error fetching completed:", err); });
-  }
+$full_name = $user['first_name'] . ' ' . $user['last_name'];
+$staff_departments = [];
 
-  /* ================= BUTTON HANDLER ================= */
-  container.addEventListener("click", function (e) {
-    var btn = e.target.closest(".btn-serve, .btn-back, .btn-claim");
-    if (!btn) return;
+// Fetch staff's assigned departments (department_id)
+$stmt = $pdo->prepare("SELECT department_id FROM staff_departments WHERE staff_id = ?");
+$stmt->execute([$_SESSION['user_id']]);
+$staff_departments = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    var id = btn.dataset.id;
-    var action = null;
-    if (btn.classList.contains("btn-serve")) action = "serve";
-    else if (btn.classList.contains("btn-back")) action = "back";
-    else if (btn.classList.contains("btn-claim")) action = "complete";
+// If staff has no departments, set a dummy value so no requests are fetched
+if (empty($staff_departments)) {
+    $staff_departments = [-1]; // impossible department
+}
 
-    if (!action) return;
+$inQuery = implode(',', array_fill(0, count($staff_departments), '?'));
 
-    updateStatus(id, action);
-  });
+// ✅ Queueing / Only show if claim_date is today
+$stmt = $pdo->prepare("
+    SELECT * FROM requests 
+    WHERE status = 'In Queue Now'
+      AND (claim_date IS NULL OR DATE(claim_date) = CURDATE())
+      AND department IN ($inQuery)
+    ORDER BY id ASC
+");
+$stmt->execute($staff_departments);
+$queueing = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-  /* ================= UPDATE STATUS ================= */
-  function updateStatus(id, action) {
-    fetch("update_serving.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ request_id: id, action: action })
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        if (!data.success) {
-          showFlashMessage("Error: " + (data.message || "Unknown error"), "error");
-          return;
-        }
-        showFlashMessage(data.message, "success");
-        refreshAll();
-      })
-      .catch(function () {
-        showFlashMessage("Server error while updating status.", "error");
-      });
-  }
 
-  /* ================= REFRESH ALL ================= */
-  window.refreshAll = function () {
-    fetchAll();
-  };
+// ✅ Serving: status 'Serving'
+$stmt = $pdo->prepare("
+    SELECT * FROM requests 
+    WHERE status='Serving' 
+    AND department IN ($inQuery)
+    ORDER BY serving_position ASC
+");
+$stmt->execute($staff_departments);
+$serving = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-  function fetchAll() {
-    Promise.all([
-      fetch("fetch_queueing.php?department=" + department).then(function (r) { return r.json(); }),
-      fetch("fetch_serving.php?department=" + department).then(function (r) { return r.json(); }),
-      fetch("fetch_completed.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          completed_date: completedPicker ? completedPicker.value : null,
-          department: department
-        })
-      }).then(function (r) { return r.json(); })
-    ])
-      .then(function (results) {
-        var queueingData = results[0];
-        var servingData = results[1];
-        var completedData = results[2];
+// ✅ Completed: status 'Completed'
+$stmt = $pdo->prepare("
+    SELECT * FROM requests 
+    WHERE status='Completed' 
+    AND department IN ($inQuery)
+    ORDER BY approved_date DESC
+");
+$stmt->execute($staff_departments);
+$completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        if (queueingData.success) renderList(queueingColumn, queueingData.requests, "queueing");
-        if (servingData.success) renderList(servingColumn, servingData.requests, "serving");
-        if (completedData.success) renderList(completedColumn, completedData.requests, "completed");
-      })
-      .catch(function (err) { console.error("Error refreshing lists:", err); });
-  }
+?>
 
-  /* ================= RENDER LIST ================= */
-  function renderList(containerEl, list, type) {
-    if (!containerEl) return;
-    containerEl.innerHTML = "";
-    if (!list || list.length === 0) {
-      containerEl.innerHTML = "<p class='empty'>No " + type + " requests.</p>";
-      return;
-    }
 
-    list.forEach(function (req) {
-      var div = document.createElement("div");
-      div.className = "card";
-      div.id = "req-" + req.id;
 
-      var actionsHtml = "";
-      if (type === "queueing") {
-        actionsHtml = "<button class='btn btn-serve' data-id='" + req.id + "'>Serve</button>";
-      } else if (type === "serving") {
-        actionsHtml =
-          "<button class='btn btn-back' data-id='" + req.id + "'>Back</button>" +
-          "<button class='btn btn-claim' data-id='" + req.id + "'>Complete</button>";
-      }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Now Serving</title>
+<link rel="stylesheet" href="staff_requests.css">
+<link rel="stylesheet" href="now_serving.css">
+</head>
+<body>
+<nav class="sidebar">
+    <header>
+        <div class="image-text">
+            <span class="image"><img src="assets/fatimalogo.jpg" alt="logo"></span>
+            <div class="text header-text">
+                <span class="profession">Staff Dashboard</span>
+                <span class="name"><?php echo htmlspecialchars($full_name); ?></span>
+            </div>
+        </div>
+        <hr>
+    </header>
+    <div class="menu-bar">
+        <div class="menu">
+            <ul class="menu-links">
+                <li class="nav-link"><button class="tablinks"><a href="staff_dashboard.php" class="tablinks">Dashboard</a></button></li>
+                <li class="nav-link"><button class="tablinks"><a href="staff_requests.php" class="tablinks">Requests</a></button></li>
+                <li class="nav-link"><button class="tablinks"><a href="now_serving.php" class="tablinks">Serving</a></button></li>
+                <li class="nav-link"><button class="tablinks"><a href="archive.php" class="tablinks">Archive</a></button></li>
+            </ul>
+        </div>
+        <div class="bottom-content">
+            <li class="nav-link"><button class="tablinks"><a href="logout_user.php" class="tablinks">Logout</a></button></li>
+        </div>
+    </div>
+</nav>
 
-      div.innerHTML =
-        "<span><strong>ID:</strong> " + req.id + "</span>" +
-        "<span><strong>Name:</strong> " + req.first_name + " " + req.last_name + "</span>" +
-        "<span><strong>Documents:</strong> " + (req.documents || "") + "</span>" +
-        "<span><strong>Notes:</strong> " + (req.notes || "") + "</span>" +
-        "<span><strong>Status:</strong> " + req.status + "</span>" +
-        (req.queueing_num ? "<span class='queue-number'><strong>Queue #:</strong> " + req.queueing_num + "</span>" : "") +
-        (req.serving_position ? "<span class='position'><strong>Position:</strong> " + req.serving_position + "</span>" : "") +
-        "<div class='actions'>" + actionsHtml + "</div>";
+<div class="container" data-department="<?php echo htmlspecialchars($staff_departments[0] ?? 0); ?>">
+    <!-- Queueing Column -->
+    <div class="column" id="queueing-column">
+        <h2>Queueing</h2>
+        <?php foreach($queueing as $req): ?>
+        <div class="card" id="req-<?php echo $req['id']; ?>">
+            <span><strong>ID:</strong> <span class="value"><?php echo $req['id']; ?></span></span>
+            <span><strong>Name:</strong> <span class="value"><?php echo htmlspecialchars($req['first_name'].' '.$req['last_name']); ?></span></span>
+            <span><strong>Documents:</strong> <span class="value"><?php echo htmlspecialchars($req['documents']); ?></span></span>
+            <span><strong>Notes:</strong> <span class="value"><?php echo htmlspecialchars($req['notes']); ?></span></span>
+            <span><strong>Status:</strong> <span class="value"><?php echo htmlspecialchars($req['status']); ?></span></span>
+            <div class="actions">
+                <button class="btn-serve" data-id="<?php echo $req['id']; ?>">Serve</button>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
 
-      containerEl.appendChild(div);
-    });
-  }
+    <!-- Serving Column -->
+    <div class="column" id="serving-column">
+        <h2>Serving</h2>
+        <?php foreach($serving as $req): ?>
+        <div class="card" id="req-<?php echo $req['id']; ?>">
+            <span><strong>ID:</strong> <span class="value"><?php echo $req['id']; ?></span></span>
+            <span><strong>Name:</strong> <span class="value"><?php echo htmlspecialchars($req['first_name'].' '.$req['last_name']); ?></span></span>
+            <span><strong>Documents:</strong> <span class="value"><?php echo htmlspecialchars($req['documents']); ?></span></span>
+            <span><strong>Notes:</strong> <span class="value"><?php echo htmlspecialchars($req['notes']); ?></span></span>
+            <span><strong>Status:</strong> <span class="value"><?php echo htmlspecialchars($req['status']); ?></span></span>
 
-  // Initial load
-  fetchAll();
-});
+            <?php if(!empty($req['queueing_num'])): ?>
+                <span class="queue-number"><strong>Queue #:</strong> <?php echo $req['queueing_num']; ?></span>
+            <?php endif; ?>
+
+            <?php if(!empty($req['serving_position'])): ?>
+                <span class="position"><strong>Position:</strong> <?php echo $req['serving_position']; ?></span>
+            <?php endif; ?>
+
+            <div class="actions">
+                <button class="btn-back" data-id="<?php echo $req['id']; ?>">Back</button>
+                <button class="btn-claim" data-id="<?php echo $req['id']; ?>">Claim</button>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+
+    <!-- Completed Column -->
+    <div class="column" id="completed-column">
+        <div class="completed-header">
+    <h2 id="completed-title">Completed</h2>
+    <input type="date" id="completed-date-picker" style="margin-left: 20px;">
+</div>
+        <div id="completed-list">
+        <?php foreach($completed as $req): ?>
+            <div class="card" id="req-<?php echo $req['id']; ?>">
+                <span><strong>ID:</strong> <span class="value"><?php echo $req['id']; ?></span></span>
+                <span><strong>Name:</strong> <span class="value"><?php echo htmlspecialchars($req['first_name'].' '.$req['last_name']); ?></span></span>
+                <span><strong>Documents:</strong> <span class="value"><?php echo htmlspecialchars($req['documents']); ?></span></span>
+                <span><strong>Notes:</strong> <span class="value"><?php echo htmlspecialchars($req['notes']); ?></span></span>
+                <span><strong>Status:</strong> <span class="value"><?php echo htmlspecialchars($req['status']); ?></span></span>
+                <span>Claimed / Completed</span>
+            </div>
+        <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+
+<script src="now_serving.js"></script>
+<script>
+  setInterval(() => location.reload(), 2000); // reload every 1.5 seconds
+</script>
+
+</body>
+</html>
