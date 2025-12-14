@@ -1,141 +1,195 @@
+/* =========== SAFE STAFF DASHBOARD JS =========== */
+
 document.addEventListener("DOMContentLoaded", function () {
-  var container = document.querySelector(".container");
-  if (!container) return;
 
-  var department = container.dataset.department || 0;
-  var servingColumn = document.getElementById("serving-column");
-  var queueingColumn = document.getElementById("queueing-column");
-  var completedColumn = document.getElementById("completed-list");
-  var completedPicker = document.getElementById("completed-date-picker");
+    /* ====== NAVIGATION BAR ====== */
+    const navMenu = document.getElementById('navMenu');
+    const toggleBtn = document.getElementById('toggleBtn');
 
-  
-  /* ================= FETCH COMPLETED ================= */
-  if (completedPicker) {
-    completedPicker.addEventListener("change", function () {
-      refreshCompleted();
-    });
-  }
-
-  function refreshCompleted() {
-    fetch("fetch_completed.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        completed_date: completedPicker.value || null,
-        department: department
-      })
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        if (data.success) renderList(completedColumn, data.requests, "completed");
-      })
-      .catch(function (err) { console.error("Error fetching completed:", err); });
-  }
-
-  /* ================= BUTTON HANDLER ================= */
-  container.addEventListener("click", function (e) {
-    var btn = e.target.closest(".btn-serve, .btn-back, .btn-claim");
-    if (!btn) return;
-
-    var id = btn.dataset.id;
-    var action = null;
-    if (btn.classList.contains("btn-serve")) action = "serve";
-    else if (btn.classList.contains("btn-back")) action = "back";
-    else if (btn.classList.contains("btn-claim")) action = "complete";
-
-    if (!action) return;
-
-    updateStatus(id, action);
-  });
-
-  /* ================= UPDATE STATUS ================= */
-  function updateStatus(id, action) {
-    fetch("update_serving.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ request_id: id, action: action })
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        if (!data.success) {
-          showFlashMessage("Error: " + (data.message || "Unknown error"), "error");
-          return;
+    function myMenuFunction() {
+        if (!navMenu || !toggleBtn) return;
+        if (navMenu.className === 'nav-menu') {
+            navMenu.className += ' responsive';
+            toggleBtn.className = 'uil uil-multiply';
+        } else {
+            navMenu.className = 'nav-menu';
+            toggleBtn.className = 'uil uil-bars';
         }
-        showFlashMessage(data.message, "success");
-        refreshAll();
-      })
-      .catch(function () {
-        showFlashMessage("Server error while updating status.", "error");
-      });
-  }
-
-  /* ================= REFRESH ALL ================= */
-  window.refreshAll = function () {
-    fetchAll();
-  };
-
-  function fetchAll() {
-    Promise.all([
-      fetch("fetch_queueing.php?department=" + department).then(function (r) { return r.json(); }),
-      fetch("fetch_serving.php?department=" + department).then(function (r) { return r.json(); }),
-      fetch("fetch_completed.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          completed_date: completedPicker ? completedPicker.value : null,
-          department: department
-        })
-      }).then(function (r) { return r.json(); })
-    ])
-      .then(function (results) {
-        var queueingData = results[0];
-        var servingData = results[1];
-        var completedData = results[2];
-
-        if (queueingData.success) renderList(queueingColumn, queueingData.requests, "queueing");
-        if (servingData.success) renderList(servingColumn, servingData.requests, "serving");
-        if (completedData.success) renderList(completedColumn, completedData.requests, "completed");
-      })
-      .catch(function (err) { console.error("Error refreshing lists:", err); });
-  }
-
-  /* ================= RENDER LIST ================= */
-  function renderList(containerEl, list, type) {
-    if (!containerEl) return;
-    containerEl.innerHTML = "";
-    if (!list || list.length === 0) {
-      containerEl.innerHTML = "<p class='empty'>No " + type + " requests.</p>";
-      return;
     }
 
-    list.forEach(function (req) {
-      var div = document.createElement("div");
-      div.className = "card";
-      div.id = "req-" + req.id;
+    function closeMenu() {
+        if (!navMenu) return;
+        navMenu.className = 'nav-menu';
+    }
 
-      var actionsHtml = "";
-      if (type === "queueing") {
-        actionsHtml = "<button class='btn btn-serve' data-id='" + req.id + "'>Serve</button>";
-      } else if (type === "serving") {
-        actionsHtml =
-          "<button class='btn btn-back' data-id='" + req.id + "'>Back</button>" +
-          "<button class='btn btn-claim' data-id='" + req.id + "'>Complete</button>";
-      }
+    if (toggleBtn) toggleBtn.addEventListener('click', myMenuFunction);
+    document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', closeMenu));
 
-      div.innerHTML =
-        "<span><strong>ID:</strong> " + req.id + "</span>" +
-        "<span><strong>Name:</strong> " + req.first_name + " " + req.last_name + "</span>" +
-        "<span><strong>Documents:</strong> " + (req.documents || "") + "</span>" +
-        "<span><strong>Notes:</strong> " + (req.notes || "") + "</span>" +
-        "<span><strong>Status:</strong> " + req.status + "</span>" +
-        (req.queueing_num ? "<span class='queue-number'><strong>Queue #:</strong> " + req.queueing_num + "</span>" : "") +
-        (req.serving_position ? "<span class='position'><strong>Position:</strong> " + req.serving_position + "</span>" : "") +
-        "<div class='actions'>" + actionsHtml + "</div>";
+    /* ====== HEADER SHADOW ON SCROLL ====== */
+    function headerShadow() {
+        const navHeader = document.getElementById('header');
+        if (!navHeader) return;
 
-      containerEl.appendChild(div);
-    });
-  }
+        if (window.scrollY > 50) {
+            navHeader.style.boxShadow = '0 4px 10px #000000BB';
+            navHeader.style.height = '70px';
+            navHeader.style.lineHeight = '70px';
+            navHeader.style.background = '#cfcfcf';
+            navHeader.style.backdropFilter = 'blur(8px)';
+        } else {
+            navHeader.style.boxShadow = 'none';
+            navHeader.style.height = '90px';
+            navHeader.style.lineHeight = '90px';
+            navHeader.style.background = '#fff';
+            navHeader.style.backdropFilter = 'blur(0px)';
+        }
+    }
 
-  // Initial load
-  fetchAll();
+    window.addEventListener('scroll', headerShadow);
+    window.addEventListener('load', headerShadow);
+
+    /* ====== VIEW DETAILS MODAL ====== */
+    const modal = document.getElementById("detailsModal");
+    if (modal) {
+        const closeModal = modal.querySelector(".close");
+        const attachmentContainer = document.getElementById("attachmentContainer");
+
+        const requestID = document.getElementById("requestID");
+        const firstName = document.getElementById("firstName");
+        const lastName = document.getElementById("lastName");
+        const studentNumber = document.getElementById("studentNumber");
+        const section = document.getElementById("section");
+        const lastSchoolYear = document.getElementById("lastSchoolYear");
+        const lastSemesterAttended = document.getElementById("lastSemesterAttended");
+        const documents = document.getElementById("documents");
+        const notes = document.getElementById("notes");
+
+        document.querySelectorAll(".viewDetails").forEach(button => {
+            button.addEventListener("click", function (e) {
+                e.preventDefault();
+
+                if (requestID) requestID.textContent = button.dataset.requestId || '';
+                if (firstName) firstName.textContent = button.dataset.requestFirstName || '';
+                if (lastName) lastName.textContent = button.dataset.requestLastName || '';
+                if (studentNumber) studentNumber.textContent = button.dataset.requestStudentNumber || '';
+                if (section) section.textContent = button.dataset.requestSection || '';
+                if (lastSchoolYear) lastSchoolYear.textContent = button.dataset.requestLastSchoolYear || '';
+                if (lastSemesterAttended) lastSemesterAttended.textContent = button.dataset.requestLastSemester || '';
+                if (documents) documents.textContent = button.dataset.requestDocuments || '';
+                if (notes) notes.textContent = button.dataset.requestNotes || '';
+
+                if (attachmentContainer) {
+                    attachmentContainer.innerHTML = '';
+                    let attachments = [];
+                    try { attachments = JSON.parse(button.dataset.requestAttachments); } catch { attachments = []; }
+
+                    if (attachments.length > 0 && attachments[0] !== "") {
+                        attachments.forEach(file => {
+                            const a = document.createElement("a");
+                            a.href = "uploads/" + file;
+                            a.target = "_blank";
+                            a.textContent = file;
+                            a.style.display = "block";
+                            attachmentContainer.appendChild(a);
+                        });
+                    } else {
+                        attachmentContainer.textContent = "No attachments.";
+                    }
+                }
+
+                modal.style.display = "block";
+            });
+        });
+
+        if (closeModal) closeModal.addEventListener("click", () => modal.style.display = "none");
+        window.addEventListener("click", e => { if (e.target === modal) modal.style.display = "none"; });
+    }
+
+    /* ====== NOTIFICATIONS ====== */
+    const notifBtn = document.getElementById("notifBtn");
+    const notifDropdown = document.getElementById("notifDropdown");
+    const notifCount = document.getElementById("notifCount");
+    const notifList = document.getElementById("notifList");
+    const audio = new Audio("assets/notif.mp3");
+
+    if (notifBtn && notifDropdown && notifCount && notifList) {
+        const today = new Date().toISOString().split("T")[0];
+        const lastDay = localStorage.getItem("notifLastDay");
+
+        if (lastDay !== today) {
+            localStorage.removeItem("seenNotifications");
+            localStorage.setItem("notifLastDay", today);
+            notifList.innerHTML = "";
+            notifCount.textContent = "0";
+        }
+
+        const knownRequestIds = new Set(JSON.parse(localStorage.getItem("seenNotifications") || "[]"));
+        const countedRequestIds = new Set();
+        let newNotifications = 0;
+        let soundInterval = null;
+        let fetchedData = [];
+
+        function fetchNotifications() {
+            fetch("notifications.php")
+                .then(res => res.json())
+                .then(data => {
+                    if (!Array.isArray(data) || data.length === 0) return;
+
+                    let newRequestFound = false;
+
+                    data.forEach(req => {
+                        if (!fetchedData.some(d => d.id === req.id)) fetchedData.push(req);
+
+                        if (!knownRequestIds.has(req.id) && !countedRequestIds.has(req.id)) {
+                            newNotifications++;
+                            notifCount.textContent = newNotifications;
+                            notifBtn.style.color = "#008c45";
+                            countedRequestIds.add(req.id);
+                            newRequestFound = true;
+                        }
+                    });
+
+                    if (newRequestFound && notifDropdown.style.display !== "block" && !soundInterval) {
+                        audio.currentTime = 0;
+                        audio.play().catch(() => {});
+                        soundInterval = setInterval(() => {
+                            audio.currentTime = 0;
+                            audio.play().catch(() => {});
+                        }, 5000);
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        notifBtn.addEventListener("click", () => {
+            const isOpen = notifDropdown.style.display === "block";
+            notifDropdown.style.display = isOpen ? "none" : "block";
+
+            if (!isOpen) {
+                if (soundInterval) { clearInterval(soundInterval); soundInterval = null; }
+                notifList.innerHTML = "";
+
+                fetchedData.forEach(req => {
+                    const li = document.createElement("li");
+                    li.dataset.id = req.id;
+                    if (!knownRequestIds.has(req.id)) li.classList.add("new-notif");
+
+                    const type = req.walk_in == 1 ? "Walk-In" : "Online";
+                    li.innerHTML = `<div class="notif-user">${req.first_name} ${req.last_name}</div>
+                                    <div class="notif-type-dept">${type} - Dept: ${req.department}</div>`;
+                    notifList.prepend(li);
+                    knownRequestIds.add(req.id);
+                });
+
+                localStorage.setItem("seenNotifications", JSON.stringify([...knownRequestIds]));
+                newNotifications = 0;
+                notifCount.textContent = "0";
+                countedRequestIds.clear();
+            }
+        });
+
+        setInterval(fetchNotifications, 2000);
+        fetchNotifications();
+    }
+
 });
