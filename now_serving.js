@@ -9,14 +9,11 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ================= FLASH MESSAGE ================= */
   function showFlashMessage(message, type = "success") {
     const flash = document.createElement("div");
-    flash.className = flash-message ${type};
+    flash.className = `flash-message ${type}`;
     flash.textContent = message;
     document.body.appendChild(flash);
 
-    // trigger animation
     setTimeout(() => flash.classList.add("show"), 10);
-
-    // remove after 3s
     setTimeout(() => {
       flash.classList.remove("show");
       setTimeout(() => flash.remove(), 300);
@@ -24,22 +21,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ================= FETCH COMPLETED BY DATE ================= */
-  if (completedPicker) {
-    completedPicker.addEventListener("change", refreshCompleted);
-  }
+  completedPicker.addEventListener("change", () => {
+    refreshCompleted();
+  });
 
   function refreshCompleted() {
+    const department = container.dataset.department || 0;
     fetch("fetch_completed.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        completed_date: completedPicker ? completedPicker.value : null,
+        completed_date: completedPicker.value || null,
         department: department,
-      }), 
+      }),
     })
       .then((res) => res.json())
       .then((data) => {
-        if (data.success) renderList(completedColumn, data.requests, "completed");
+        if (data.success)
+          renderList(completedColumn, data.requests, "completed");
       })
       .catch((err) => console.error("Error fetching completed:", err));
   }
@@ -50,11 +49,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!btn) return;
 
     const id = btn.dataset.id;
-    let action = null;
-
-    if (btn.classList.contains("btn-serve")) action = "serve";
-    else if (btn.classList.contains("btn-back")) action = "back";
-    else if (btn.classList.contains("btn-claim")) action = "complete";
+    const action = btn.classList.contains("btn-serve")
+      ? "serve"
+      : btn.classList.contains("btn-back")
+      ? "back"
+      : btn.classList.contains("btn-claim")
+      ? "complete"
+      : null;
 
     if (!action) return;
 
@@ -71,73 +72,98 @@ document.addEventListener("DOMContentLoaded", () => {
       .then((res) => res.json())
       .then((data) => {
         if (!data.success) {
-          showFlashMessage("Error: " + (data.message || "Unknown error"), "error");
+          showFlashMessage(
+            "Error: " + (data.message || "Unknown error"),
+            "error"
+          );
           return;
         }
+
         showFlashMessage(data.message, "success");
         refreshAll();
       })
-      .catch(() => showFlashMessage("Server error while updating status.", "error"));
+      .catch((err) =>
+        showFlashMessage("Server error while updating status.", "error")
+      );
   }
 
-  /* ================= REFRESH ALL ================= */
-  function refreshAll() {
+  /* ================= REFRESH ALL COLUMNS ================= */
+  window.refreshAll = function () {
+    const department = container.dataset.department || 0;
+
     Promise.all([
-      fetch(fetch_queueing.php?department=${department}).then((r) => r.json()),
-      fetch(fetch_serving.php?department=${department}).then((r) => r.json()),
+      // Queueing always shows In Queue Now
+      fetch(`fetch_queueing.php?department=${department}`).then((r) =>
+        r.json()
+      ),
+
+      // Serving shows all current Serving items (do NOT auto-serve on refresh)
+      fetch(`fetch_serving.php?department=${department}`).then((r) => r.json()),
+
+      // Completed
       fetch("fetch_completed.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          completed_date: completedPicker ? completedPicker.value : null,
+          completed_date: completedPicker.value || null,
           department: department,
         }),
       }).then((r) => r.json()),
     ])
       .then(([queueingData, servingData, completedData]) => {
-        if (queueingData.success) renderList(queueingColumn, queueingData.requests, "queueing");
-        if (servingData.success) renderList(servingColumn, servingData.requests, "serving");
-        if (completedData.success) renderList(completedColumn, completedData.requests, "completed");
+        if (queueingData.success)
+          renderList(queueingColumn, queueingData.requests, "queueing");
+        if (servingData.success)
+          renderList(servingColumn, servingData.requests, "serving");
+        if (completedData.success)
+          renderList(completedColumn, completedData.requests, "completed");
       })
       .catch((err) => console.error("Error refreshing lists:", err));
-  }
+  };
 
   /* ================= RENDER LIST ================= */
   function renderList(containerEl, list, type) {
     containerEl.innerHTML = "";
     if (!list || list.length === 0) {
-      containerEl.innerHTML = <p class="empty">No ${type} requests.</p>;
+      containerEl.innerHTML = `<p class="empty">No ${type} requests.</p>`;
       return;
     }
 
     list.forEach((req) => {
       const div = document.createElement("div");
       div.className = "card";
-      div.id = req-${req.id};
-
-      let actionsHtml = "";
-      if (type === "queueing") actionsHtml = <button class="btn btn-serve" data-id="${req.id}">Serve</button>;
-      else if (type === "serving")
-        actionsHtml = `
-          <button class="btn btn-back" data-id="${req.id}">Back</button>
-          <button class="btn btn-claim" data-id="${req.id}">Complete</button>
-        `;
+      div.id = `req-${req.id}`;
 
       div.innerHTML = `
         <span><strong>ID:</strong> ${req.id}</span>
         <span><strong>Name:</strong> ${req.first_name} ${req.last_name}</span>
-        <span><strong>Documents:</strong> ${req.documents || ""}</span>
-        <span><strong>Notes:</strong> ${req.notes || ""}</span>
+        <span><strong>Documents:</strong> ${req.documents}</span>
+        <span><strong>Notes:</strong> ${req.notes}</span>
         <span><strong>Status:</strong> ${req.status}</span>
-        ${req.queueing_num ? <span class="queue-number"><strong>Queue #:</strong> ${req.queueing_num}</span> : ""}
-        ${req.serving_position ? <span class="position"><strong>Position:</strong> ${req.serving_position}</span> : ""}
-        <div class="actions">${actionsHtml}</div>
+        ${
+          req.queueing_num
+            ? `<span class="queue-number"><strong>Queue #:</strong> ${req.queueing_num}</span>`
+            : ""
+        }
+        ${
+          req.serving_position
+            ? `<span class="position"><strong>Position:</strong> ${req.serving_position}</span>`
+            : ""
+        }
+        <div class="actions">
+          ${
+            type === "queueing"
+              ? `<button class="btn btn-serve" data-id="${req.id}">Serve</button>`
+              : type === "serving"
+              ? `<button class="btn btn-back" data-id="${req.id}">Back</button>
+                 <button class="btn btn-claim" data-id="${req.id}">Complete</button>`
+              : ""
+          }
+        </div>
       `;
 
       containerEl.appendChild(div);
     });
   }
 
-  // Initial load
-  refreshAll();
 });
