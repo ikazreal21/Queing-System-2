@@ -72,6 +72,7 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute($staff_departments);
 $completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
 
 
@@ -183,4 +184,4 @@ $completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </script>
 
 </body>
-</html> 
+</html>
