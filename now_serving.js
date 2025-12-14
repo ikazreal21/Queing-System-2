@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
       body: JSON.stringify({
         completed_date: completedPicker ? completedPicker.value : null,
         department: department,
-      }),
+      }), 
     })
       .then((res) => res.json())
       .then((data) => {
