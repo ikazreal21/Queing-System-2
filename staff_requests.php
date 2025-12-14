@@ -97,7 +97,7 @@ $documents = $documents ?? [];
 <head>
     <meta charset="UTF-8">
     <title>Staff Requests</title>
-    <link rel="stylesheet" href="staff_requests.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="staff_requests.css">
 </head>
 <script>
     document.addEventListener("DOMContentLoaded", () => {
@@ -398,7 +398,7 @@ $documents = $documents ?? [];
         function confirmPending() { return confirm("Are you sure you want to send this request back to pending?"); }
     </script>
 
-    <script src="staff_requests.js?v=<?= time() ?>"></script>
+    <script src="staff_requests.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const countdownCells = document.querySelectorAll("#processing-box .countdown");
@@ -419,7 +419,7 @@ $documents = $documents ?? [];
                         const hrs = Math.floor(diff / (1000 * 60 * 60));
                         const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                         const secs = Math.floor((diff % (1000 * 60)) / 1000);
-                        cell.textContent = `${hrs.toString().padStart(2, '0')} : ${mins.toString().padStart(2, '0')} : ${secs.toString().padStart(2, '0')}`;
+                        cell.textContent = ${hrs.toString().padStart(2, '0')} : ${mins.toString().padStart(2, '0')} : ${secs.toString().padStart(2, '0')};
                     }
                 });
             }
@@ -509,6 +509,12 @@ $documents = $documents ?? [];
                     <label>Notes / Other Concerns:</label>
                     <textarea name="notes" rows="4" placeholder="Write any additional concerns here..."></textarea>
                 </div>
+                <div class="priority-section-unique">
+    <label>
+        <input type="checkbox" name="priority" value="1">
+        Mark as Priority Request
+    </label>
+</div>
 
                 <button type="submit" id="submit-form-unique">Submit</button>
             </form>
