@@ -83,22 +83,6 @@ $completedCount = $stmt->fetchColumn();
     border: 1px solid #ccc;
     font-size: 14px;
 }
-.attachment-image {
-    max-width: 300px;
-    max-height: 300px;
-    margin: 5px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-}
-.attachment-link {
-    display: block;
-    margin: 5px 0;
-    color: #007bff;
-    text-decoration: none;
-}
-.attachment-link:hover {
-    text-decoration: underline;
-}
 </style>
 </head>
 <body>
@@ -106,13 +90,14 @@ $completedCount = $stmt->fetchColumn();
 <!-- ================= SIDEBAR ================= -->
 <nav class="sidebar">
     <div class="notification-wrapper">
-        <button id="notifBtn" class="notif-btn">
-            🔔 <span id="notifCount" class="notif-count">0</span>
-        </button>
-        <div id="notifDropdown" class="notif-dropdown">
-            <ul id="notifList"></ul>
-        </div>
+    <button id="notifBtn" class="notif-btn">
+        🔔 <span id="notifCount" class="notif-count">0</span>
+    </button>
+    <div id="notifDropdown" class="notif-dropdown">
+        <ul id="notifList"></ul>
     </div>
+</div>
+
 
     <header>
         <div class="image-text">
@@ -129,7 +114,7 @@ $completedCount = $stmt->fetchColumn();
             <ul class="menu-links">
                 <li class="nav-link"><button class="tablinks"><a href="staff_dashboard.php" class="tablinks">Dashboard</a></button></li>
                 <li class="nav-link"><button class="tablinks"><a href="staff_requests.php" class="tablinks">Requests</a></button></li>
-                <li class="nav-link"><button class="tablinks"><a href="now_serving.php" class="tablinks">Now Serving</a></button></li>
+                <li class="nav-link"><button class="tablinks"><a href="now_serving.php" class="tablinks">Serving</a></button></li>
                 <li class="nav-link"><button class="tablinks"><a href="archive.php" class="tablinks">Archive</a></button></li>
             </ul>
         </div>
@@ -215,18 +200,7 @@ $completedCount = $stmt->fetchColumn();
                         $stmt->execute(array_merge([$todayDate], $staff_departments));
                         $i = 1;
                         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                            // Fix attachment formatting - remove brackets and quotes
-                            $attachments = $row['attachment'];
-                            if (!empty($attachments)) {
-                                // Remove brackets and quotes, then trim
-                                $attachments = trim($attachments, '[]"');
-                                // Split by comma and trim each element
-                                $attachmentArray = array_map('trim', explode(',', $attachments));
-                                $attachments = json_encode($attachmentArray);
-                            } else {
-                                $attachments = '[]';
-                            }
-                            
+                            $attachments = json_encode(array_map('trim', explode(',', $row['attachment'])));
                             echo "<tr>";
                             echo "<td>" . $i++ . "</td>";
                             echo "<td>" . htmlspecialchars($row['first_name'] . " " . $row['last_name']) . "</td>";
@@ -282,6 +256,7 @@ $completedCount = $stmt->fetchColumn();
 
 <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
 
+
 <script src="staff_dashboard.js"></script>
 <script>
 // ================= VIEW DETAILS MODAL =================
@@ -289,12 +264,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const modal = document.getElementById("detailsModal");
     const closeModal = modal.querySelector(".close");
     const attachmentContainer = document.getElementById("attachmentContainer");
-
-    // Function to check if file is an image
-    function isImageFile(filename) {
-        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
-        return imageExtensions.some(ext => filename.toLowerCase().includes(ext));
-    }
 
     document.querySelectorAll(".viewDetails").forEach(button => {
         button.addEventListener("click", function () {
@@ -310,50 +279,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
             attachmentContainer.innerHTML = '';
             let attachments = [];
-            try { 
-                attachments = JSON.parse(button.dataset.requestAttachments); 
-            } catch (err) { 
-                attachments = []; 
-            }
+            try { attachments = JSON.parse(button.dataset.requestAttachments); } 
+            catch (err) { attachments = []; }
 
             if (attachments.length > 0 && attachments[0] !== "") {
                 attachments.forEach(file => {
-                    if (isImageFile(file)) {
-                        // Create image element for image files
-                        const imgContainer = document.createElement("div");
-                        imgContainer.style.margin = "10px 0";
-                        
-                        const img = document.createElement("img");
-                        img.src = file;
-                        img.alt = "Attachment";
-                        img.className = "attachment-image";
-                        img.style.cursor = "pointer";
-                        
-                        // Make image clickable to open in new tab
-                        img.onclick = function() {
-                            window.open(file, '_blank');
-                        };
-                        
-                        const link = document.createElement("a");
-                        link.href = file;
-                        link.target = "_blank";
-                        link.className = "attachment-link";
-                        link.textContent = "View full size";
-                        
-                        imgContainer.appendChild(img);
-                        imgContainer.appendChild(link);
-                        attachmentContainer.appendChild(imgContainer);
-                    } else {
-                        // Create regular link for non-image files
-                        const link = document.createElement("a");
-                        link.href = file;
-                        link.target = "_blank";
-                        link.className = "attachment-link";
-                        link.textContent = "Attachment";
-                        link.style.display = "block";
-                        link.style.marginBottom = "5px";
-                        attachmentContainer.appendChild(link);
-                    }
+                    const a = document.createElement("a");
+                    a.href = file;
+                    a.target = "_blank";
+                    a.textContent = file;
+                    a.style.display = "block";
+                    attachmentContainer.appendChild(a);
                 });
             } else {
                 attachmentContainer.textContent = "No attachments.";
@@ -365,50 +301,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     closeModal.onclick = () => modal.style.display = "none";
     window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
-
-    document.getElementById("archiveDatePicker").addEventListener("change", function() {
-        const selectedDate = this.value;
-        const archiveTableBody = document.querySelector("#archiveTable tbody");
-        if (!selectedDate) return;
-
-        fetch("fetch_archives.php?date=" + selectedDate)
-            .then(response => response.json())
-            .then(data => {
-                archiveTableBody.innerHTML = "";
-                if (data.length === 0) {
-                    archiveTableBody.innerHTML = "<tr><td colspan='9' style='text-align:center;'>No requests found for this date</td></tr>";
-                    return;
-                }
-                let i = 1;
-                data.forEach(row => {
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-                        <td>${i++}</td>
-                        <td>${row.first_name} ${row.last_name}</td>
-                        <td>${row.student_number}</td>
-                        <td>${row.section}</td>
-                        <td>${row.last_school_year}</td>
-                        <td>${row.last_semester}</td>
-                        <td>${row.documents}</td>
-                        <td>${row.notes}</td>
-                        <td>${row.status}</td>
-                    `;
-                    archiveTableBody.appendChild(tr);
-                });
-            })
-            .catch(err => console.error(err));
-    });
-
-    document.getElementById("generateReportForm").addEventListener("submit", function (e) {
-        const selectedDate = document.getElementById("archiveDatePicker").value;
-        if (!selectedDate) {
-            e.preventDefault();
-            alert("Please select a date in the archive first.");
-            return;
-        }
-        document.getElementById("reportDateHidden").value = selectedDate;
-    });
 });
+
 </script>
 </body>
 </html>
