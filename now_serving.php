@@ -80,7 +80,7 @@ $completed = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Now Serving</title>
+<title>Serving</title>
 <link rel="stylesheet" href="staff_requests.css">
 <link rel="stylesheet" href="now_serving.css">
 </head>
