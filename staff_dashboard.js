@@ -112,16 +112,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (e.target === modal) modal.style.display = "none";
     });
 });
-// ================= GENERATE REPORT HANDLER =================
-document.getElementById("generateReportForm").addEventListener("submit", function (e) {
-    const selectedDate = document.getElementById("archiveDatePicker").value;
-    if (!selectedDate) {
-        e.preventDefault();
-        alert("Please select a date in the archive first.");
-        return;
-    }
-    document.getElementById("reportDateHidden").value = selectedDate;
-});
+
 document.addEventListener("DOMContentLoaded", function () {
     const notifBtn = document.getElementById("notifBtn");
     const notifDropdown = document.getElementById("notifDropdown");
