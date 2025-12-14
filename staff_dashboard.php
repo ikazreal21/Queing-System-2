@@ -73,7 +73,7 @@ $completedCount = $stmt->fetchColumn();
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="staff_dashboard.css">
+<link rel="stylesheet" href="staff_dashboard.css?v=<?= time() ?>">
 <title>Staff Dashboard</title>
 <style>
 #archiveDatePicker {
@@ -257,7 +257,7 @@ $completedCount = $stmt->fetchColumn();
 <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
 
 
-<script src="staff_dashboard.js"></script>
+<script src="staff_dashboard.js?v=<?= time() ?>"></script>
 <script>
 // ================= VIEW DETAILS MODAL =================
 document.addEventListener("DOMContentLoaded", function () {
