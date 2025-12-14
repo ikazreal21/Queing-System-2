@@ -8,21 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var completedColumn = document.getElementById("completed-list");
   var completedPicker = document.getElementById("completed-date-picker");
 
-  /* ================= FLASH MESSAGE ================= */
-  function showFlashMessage(message, type) {
-    type = type || "success"; // default type
-    var flash = document.createElement("div");
-    flash.className = "flash-message " + type; // ✅ no backticks
-    flash.textContent = message;
-    document.body.appendChild(flash);
-
-    setTimeout(function () { flash.classList.add("show"); }, 10);
-    setTimeout(function () {
-      flash.classList.remove("show");
-      setTimeout(function () { flash.remove(); }, 300);
-    }, 3000);
-  }
-
+  
   /* ================= FETCH COMPLETED ================= */
   if (completedPicker) {
     completedPicker.addEventListener("change", function () {
