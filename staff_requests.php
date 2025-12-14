@@ -97,7 +97,7 @@ $documents = $documents ?? [];
 <head>
     <meta charset="UTF-8">
     <title>Staff Requests</title>
-    <link rel="stylesheet" href="staff_requests.css">
+    <link rel="stylesheet" href="staff_requests.css?v=<?= time() ?>">
 </head>
 <script>
     document.addEventListener("DOMContentLoaded", () => {
@@ -398,7 +398,7 @@ $documents = $documents ?? [];
         function confirmPending() { return confirm("Are you sure you want to send this request back to pending?"); }
     </script>
 
-    <script src="staff_requests.js"></script>
+    <script src="staff_requests.js?v=<?= time() ?>"></script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const countdownCells = document.querySelectorAll("#processing-box .countdown");
