@@ -21,7 +21,7 @@ function hideNav(){
     navMenu.className = 'nav-menu';
     toggleBtn.className = 'uil uil-bars';
 }
- 
+  
 navLink.forEach(link => {
     link.addEventListener('click', hideNav);
 })
