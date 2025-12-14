@@ -1,61 +1,61 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const container = document.querySelector(".container");
-  const department = container.dataset.department || 0;
-  const servingColumn = document.getElementById("serving-column");
-  const queueingColumn = document.getElementById("queueing-column");
-  const completedColumn = document.getElementById("completed-list");
-  const completedPicker = document.getElementById("completed-date-picker");
+document.addEventListener("DOMContentLoaded", function () {
+  var container = document.querySelector(".container");
+  if (!container) return;
+
+  var department = container.dataset.department || 0;
+  var servingColumn = document.getElementById("serving-column");
+  var queueingColumn = document.getElementById("queueing-column");
+  var completedColumn = document.getElementById("completed-list");
+  var completedPicker = document.getElementById("completed-date-picker");
 
   /* ================= FLASH MESSAGE ================= */
-  function showFlashMessage(message, type = "success") {
-    const flash = document.createElement("div");
-    flash.className = `flash-message ${type}`;
+  function showFlashMessage(message, type) {
+    type = type || "success"; // default type
+    var flash = document.createElement("div");
+    flash.className = "flash-message " + type; // ✅ no backticks
     flash.textContent = message;
     document.body.appendChild(flash);
 
-    setTimeout(() => flash.classList.add("show"), 10);
-    setTimeout(() => {
+    setTimeout(function () { flash.classList.add("show"); }, 10);
+    setTimeout(function () {
       flash.classList.remove("show");
-      setTimeout(() => flash.remove(), 300);
+      setTimeout(function () { flash.remove(); }, 300);
     }, 3000);
   }
 
-  /* ================= FETCH COMPLETED BY DATE ================= */
-  completedPicker.addEventListener("change", () => {
-    refreshCompleted();
-  });
+  /* ================= FETCH COMPLETED ================= */
+  if (completedPicker) {
+    completedPicker.addEventListener("change", function () {
+      refreshCompleted();
+    });
+  }
 
   function refreshCompleted() {
-    const department = container.dataset.department || 0;
     fetch("fetch_completed.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         completed_date: completedPicker.value || null,
-        department: department,
-      }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success)
-          renderList(completedColumn, data.requests, "completed");
+        department: department
       })
-      .catch((err) => console.error("Error fetching completed:", err));
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.success) renderList(completedColumn, data.requests, "completed");
+      })
+      .catch(function (err) { console.error("Error fetching completed:", err); });
   }
 
   /* ================= BUTTON HANDLER ================= */
-  container.addEventListener("click", (e) => {
-    const btn = e.target.closest(".btn-serve, .btn-back, .btn-claim");
+  container.addEventListener("click", function (e) {
+    var btn = e.target.closest(".btn-serve, .btn-back, .btn-claim");
     if (!btn) return;
 
-    const id = btn.dataset.id;
-    const action = btn.classList.contains("btn-serve")
-      ? "serve"
-      : btn.classList.contains("btn-back")
-      ? "back"
-      : btn.classList.contains("btn-claim")
-      ? "complete"
-      : null;
+    var id = btn.dataset.id;
+    var action = null;
+    if (btn.classList.contains("btn-serve")) action = "serve";
+    else if (btn.classList.contains("btn-back")) action = "back";
+    else if (btn.classList.contains("btn-claim")) action = "complete";
 
     if (!action) return;
 
@@ -67,103 +67,89 @@ document.addEventListener("DOMContentLoaded", () => {
     fetch("update_serving.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ request_id: id, action }),
+      body: JSON.stringify({ request_id: id, action: action })
     })
-      .then((res) => res.json())
-      .then((data) => {
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
         if (!data.success) {
-          showFlashMessage(
-            "Error: " + (data.message || "Unknown error"),
-            "error"
-          );
+          showFlashMessage("Error: " + (data.message || "Unknown error"), "error");
           return;
         }
-
         showFlashMessage(data.message, "success");
         refreshAll();
       })
-      .catch((err) =>
-        showFlashMessage("Server error while updating status.", "error")
-      );
+      .catch(function () {
+        showFlashMessage("Server error while updating status.", "error");
+      });
   }
 
-  /* ================= REFRESH ALL COLUMNS ================= */
+  /* ================= REFRESH ALL ================= */
   window.refreshAll = function () {
-    const department = container.dataset.department || 0;
+    fetchAll();
+  };
 
+  function fetchAll() {
     Promise.all([
-      // Queueing always shows In Queue Now
-      fetch(`fetch_queueing.php?department=${department}`).then((r) =>
-        r.json()
-      ),
-
-      // Serving shows all current Serving items (do NOT auto-serve on refresh)
-      fetch(`fetch_serving.php?department=${department}`).then((r) => r.json()),
-
-      // Completed
+      fetch("fetch_queueing.php?department=" + department).then(function (r) { return r.json(); }),
+      fetch("fetch_serving.php?department=" + department).then(function (r) { return r.json(); }),
       fetch("fetch_completed.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          completed_date: completedPicker.value || null,
-          department: department,
-        }),
-      }).then((r) => r.json()),
+          completed_date: completedPicker ? completedPicker.value : null,
+          department: department
+        })
+      }).then(function (r) { return r.json(); })
     ])
-      .then(([queueingData, servingData, completedData]) => {
-        if (queueingData.success)
-          renderList(queueingColumn, queueingData.requests, "queueing");
-        if (servingData.success)
-          renderList(servingColumn, servingData.requests, "serving");
-        if (completedData.success)
-          renderList(completedColumn, completedData.requests, "completed");
+      .then(function (results) {
+        var queueingData = results[0];
+        var servingData = results[1];
+        var completedData = results[2];
+
+        if (queueingData.success) renderList(queueingColumn, queueingData.requests, "queueing");
+        if (servingData.success) renderList(servingColumn, servingData.requests, "serving");
+        if (completedData.success) renderList(completedColumn, completedData.requests, "completed");
       })
-      .catch((err) => console.error("Error refreshing lists:", err));
-  };
+      .catch(function (err) { console.error("Error refreshing lists:", err); });
+  }
 
   /* ================= RENDER LIST ================= */
   function renderList(containerEl, list, type) {
+    if (!containerEl) return;
     containerEl.innerHTML = "";
     if (!list || list.length === 0) {
-      containerEl.innerHTML = `<p class="empty">No ${type} requests.</p>`;
+      containerEl.innerHTML = "<p class='empty'>No " + type + " requests.</p>";
       return;
     }
 
-    list.forEach((req) => {
-      const div = document.createElement("div");
+    list.forEach(function (req) {
+      var div = document.createElement("div");
       div.className = "card";
-      div.id = `req-${req.id}`;
+      div.id = "req-" + req.id;
 
-      div.innerHTML = `
-        <span><strong>ID:</strong> ${req.id}</span>
-        <span><strong>Name:</strong> ${req.first_name} ${req.last_name}</span>
-        <span><strong>Documents:</strong> ${req.documents}</span>
-        <span><strong>Notes:</strong> ${req.notes}</span>
-        <span><strong>Status:</strong> ${req.status}</span>
-        ${
-          req.queueing_num
-            ? `<span class="queue-number"><strong>Queue #:</strong> ${req.queueing_num}</span>`
-            : ""
-        }
-        ${
-          req.serving_position
-            ? `<span class="position"><strong>Position:</strong> ${req.serving_position}</span>`
-            : ""
-        }
-        <div class="actions">
-          ${
-            type === "queueing"
-              ? `<button class="btn btn-serve" data-id="${req.id}">Serve</button>`
-              : type === "serving"
-              ? `<button class="btn btn-back" data-id="${req.id}">Back</button>
-                 <button class="btn btn-claim" data-id="${req.id}">Complete</button>`
-              : ""
-          }
-        </div>
-      `;
+      var actionsHtml = "";
+      if (type === "queueing") {
+        actionsHtml = "<button class='btn btn-serve' data-id='" + req.id + "'>Serve</button>";
+      } else if (type === "serving") {
+        actionsHtml =
+          "<button class='btn btn-back' data-id='" + req.id + "'>Back</button>" +
+          "<button class='btn btn-claim' data-id='" + req.id + "'>Complete</button>";
+      }
+
+      div.innerHTML =
+        "<span><strong>ID:</strong> " + req.id + "</span>" +
+        "<span><strong>Name:</strong> " + req.first_name + " " + req.last_name + "</span>" +
+        "<span><strong>Documents:</strong> " + (req.documents || "") + "</span>" +
+        "<span><strong>Notes:</strong> " + (req.notes || "") + "</span>" +
+        "<span><strong>Status:</strong> " + req.status + "</span>" +
+        (req.queueing_num ? "<span class='queue-number'><strong>Queue #:</strong> " + req.queueing_num + "</span>" : "") +
+        (req.serving_position ? "<span class='position'><strong>Position:</strong> " + req.serving_position + "</span>" : "") +
+        "<div class='actions'>" + actionsHtml + "</div>";
 
       containerEl.appendChild(div);
     });
   }
 
+  // Initial load
+  fetchAll();
 });
