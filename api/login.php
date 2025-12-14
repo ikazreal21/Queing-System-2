@@ -6,10 +6,10 @@ date_default_timezone_set('Asia/Manila');
 header('Content-Type: application/json');
 
 // Database connection
-$servername = "localhost";
-$username = "root";
-$password = "";
+$servername = "192.168.3.5";
 $dbname = "queue";
+$username = "cbadmin";
+$password = "%rga8477#KC86&";
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {

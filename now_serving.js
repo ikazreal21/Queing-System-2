@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ================= FLASH MESSAGE ================= */
   function showFlashMessage(message, type = "success") {
     const flash = document.createElement("div");
-    flash.className = `flash-message ${type}`;
+    flash.className = flash-message ${type};
     flash.textContent = message;
     document.body.appendChild(flash);
 
@@ -21,8 +21,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ================= FETCH COMPLETED BY DATE ================= */
-  // Leave date picker empty by default (shows all completed requests)
-
   completedPicker.addEventListener("change", () => {
     refreshCompleted();
   });
@@ -54,10 +52,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const action = btn.classList.contains("btn-serve")
       ? "serve"
       : btn.classList.contains("btn-back")
-        ? "back"
-        : btn.classList.contains("btn-claim")
-          ? "complete"
-          : null;
+      ? "back"
+      : btn.classList.contains("btn-claim")
+      ? "complete"
+      : null;
 
     if (!action) return;
 
@@ -94,10 +92,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const department = container.dataset.department || 0;
 
     Promise.all([
-      fetch(`fetch_queueing.php?department=${department}`).then((r) =>
+      // Queueing always shows In Queue Now
+      fetch(fetch_queueing.php?department=${department}).then((r) =>
         r.json()
       ),
-      fetch(`fetch_serving.php?department=${department}`).then((r) => r.json()),
+
+      // Serving shows all current Serving items (do NOT auto-serve on refresh)
+      fetch(fetch_serving.php?department=${department}).then((r) => r.json()),
+
+      // Completed
       fetch("fetch_completed.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -122,14 +125,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderList(containerEl, list, type) {
     containerEl.innerHTML = "";
     if (!list || list.length === 0) {
-      containerEl.innerHTML = `<p class="empty">No ${type} requests.</p>`;
+      containerEl.innerHTML = <p class="empty">No ${type} requests.</p>;
       return;
     }
 
     list.forEach((req) => {
       const div = document.createElement("div");
       div.className = "card";
-      div.id = `req-${req.id}`;
+      div.id = req-${req.id};
 
       div.innerHTML = `
         <span><strong>ID:</strong> ${req.id}</span>
@@ -137,22 +140,25 @@ document.addEventListener("DOMContentLoaded", () => {
         <span><strong>Documents:</strong> ${req.documents}</span>
         <span><strong>Notes:</strong> ${req.notes}</span>
         <span><strong>Status:</strong> ${req.status}</span>
-        ${req.queueing_num
-          ? `<span class="queue-number"><strong>Queue #:</strong> ${req.queueing_num}</span>`
-          : ""
-        }
-        ${req.serving_position
-          ? `<span class="position"><strong>Position:</strong> ${req.serving_position}</span>`
-          : ""
-        }
-        <div class="actions">
-          ${type === "queueing"
-          ? `<button class="btn btn-serve" data-id="${req.id}">Serve</button>`
-          : type === "serving"
-            ? `<button class="btn btn-back" data-id="${req.id}">Back</button>
-                 <button class="btn btn-claim" data-id="${req.id}">Complete</button>`
+        ${
+          req.queueing_num
+            ? <span class="queue-number"><strong>Queue #:</strong> ${req.queueing_num}</span>
             : ""
         }
+        ${
+          req.serving_position
+            ? <span class="position"><strong>Position:</strong> ${req.serving_position}</span>
+            : ""
+        }
+        <div class="actions">
+          ${
+            type === "queueing"
+              ? <button class="btn btn-serve" data-id="${req.id}">Serve</button>
+              : type === "serving"
+              ? `<button class="btn btn-back" data-id="${req.id}">Back</button>
+                 <button class="btn btn-claim" data-id="${req.id}">Complete</button>`
+              : ""
+          }
         </div>
       `;
 
@@ -160,14 +166,4 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ================= INITIAL LOAD ================= */
-  // Wait a moment to ensure DOM is ready, then do first refresh
-  setTimeout(() => {
-    refreshAll();
-  }, 100);
-
-  /* ================= AUTO REFRESH EVERY 5 SECONDS ================= */
-  setInterval(() => {
-    refreshAll();
-  }, 5000); // refresh data every 5 seconds
 });

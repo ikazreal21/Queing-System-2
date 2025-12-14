@@ -24,7 +24,6 @@ function getFirstQueueItem($pdo, $department, $exclude_id = null) {
         SELECT * FROM requests
         WHERE status='In Queue Now'
           AND department=:department
-          AND DATE(claim_date)=CURDATE()
           AND (call_attempts IS NULL OR call_attempts < 3)
     ";
     $params = [':department' => $department];
@@ -34,8 +33,8 @@ function getFirstQueueItem($pdo, $department, $exclude_id = null) {
         $params[':exclude_id'] = $exclude_id;
     }
 
-    // Serve based on fixed queueing_num (lowest first)
-    $sql .= " ORDER BY queueing_num ASC LIMIT 1";
+    // Priority first, then queueing_num, then created_at
+    $sql .= " ORDER BY CAST(priority AS UNSIGNED) DESC, queueing_num ASC, created_at ASC LIMIT 1";
 
     $stmtQueue = $pdo->prepare($sql);
     $stmtQueue->execute($params);
@@ -48,7 +47,7 @@ try {
 
         case 'serve':
         case 'auto-serve':
-            // Determine department
+            // Get staff department
             $stmtDept = $pdo->prepare("SELECT department_id FROM staff_departments WHERE staff_id=:staff_id");
             $stmtDept->execute([':staff_id' => $staff_id]);
             $departments = $stmtDept->fetchAll(PDO::FETCH_COLUMN);
@@ -60,7 +59,7 @@ try {
             $stmtServing->execute([':department' => $department]);
             if ($stmtServing->fetch()) throw new Exception("A request is already being served");
 
-            // Pick the first in queue
+            // Pick first in queue with priority logic
             $firstQueue = getFirstQueueItem($pdo, $department);
             if (!$firstQueue) throw new Exception("No queue items to serve");
 
@@ -88,9 +87,8 @@ try {
 
             $attempts = (int)$request['call_attempts'] + 1;
 
-            $serveMessage = "";
             if ($attempts >= 3) {
-                // Move to To Be Claimed (cannot be revived)
+                // Move to To Be Claimed
                 $stmtUpdate = $pdo->prepare("
                     UPDATE requests
                     SET status='To Be Claimed',
@@ -102,9 +100,8 @@ try {
                 ");
                 $stmtUpdate->execute([':id' => $request_id]);
                 $backMessage = "Moved to 'To Be Claimed' (3 attempts reached)";
-
             } else {
-                // Move back to In Queue Now (can be served again)
+                // Move back to In Queue Now
                 $stmtUpdate = $pdo->prepare("
                     UPDATE requests
                     SET status='In Queue Now',
@@ -117,8 +114,9 @@ try {
                 $backMessage = "Moved back to queue (Attempt {$attempts})";
             }
 
-            // Auto-serve next valid queue item (status='In Queue Now' AND call_attempts < 3)
+            // Auto-serve next valid queue item
             $nextQueue = getFirstQueueItem($pdo, $request['department'], $request_id);
+            $serveMessage = '';
             if ($nextQueue) {
                 $stmtUpdate = $pdo->prepare("
                     UPDATE requests

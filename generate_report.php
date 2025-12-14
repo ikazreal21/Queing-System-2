@@ -3,6 +3,7 @@ session_start();
 include('db.php');
 date_default_timezone_set("Asia/Manila");
 
+// Only accept POST with reportDate
 if (!isset($_POST['reportDate']) || empty($_POST['reportDate'])) {
     die("No date selected");
 }
@@ -29,7 +30,16 @@ $pdf->Ln(4);
 $pdf->SetFont('Arial', 'B', 16);
 $pdf->Cell(0, 10, "General Queueing Report - Registrar's Office", 0, 1, 'C');
 $pdf->SetFont('Arial', '', 12);
-$pdf->Cell(0, 10, "Date: " . date("F d, Y", strtotime($reportDate)), 0, 1, 'C');
+
+// FIXED: Ensure reportDate is valid before strtotime
+$dateText = '';
+if (!empty($reportDate) && strtotime($reportDate) !== false) {
+    $dateText = date("F d, Y", strtotime($reportDate));
+} else {
+    $dateText = "Invalid Date";
+}
+
+$pdf->Cell(0, 10, "Date: " . $dateText, 0, 1, 'C');
 $pdf->Ln(5);
 
 // Analytics
@@ -46,7 +56,7 @@ foreach($rows as $row){
     $status = $row['status'] ?? 'Unknown';
     $statusCounts[$status] = ($statusCounts[$status] ?? 0) + 1;
 
-    $docs = explode(",", $row['documents']);
+    $docs = explode(",", $row['documents'] ?? '');
     foreach($docs as $doc){
         $doc = trim($doc);
         if($doc) $docCounts[$doc] = ($docCounts[$doc] ?? 0) +1;
@@ -54,24 +64,29 @@ foreach($rows as $row){
 
     if(!empty($row['decline_reason'])) $issues[] = $row['decline_reason'];
 
-    $ts = strtotime($row['processing_start']);
-    if($ts!==false){
-        $h = (int)date('H',$ts);
-        if($h>=8 && $h<10) $hourRanges['08:00-10:00 AM']++;
-        elseif($h>=10 && $h<12) $hourRanges['10:00-12:00 PM']++;
-        elseif($h>=12 && $h<14) $hourRanges['12:00-02:00 PM']++;
-        elseif($h>=14 && $h<16) $hourRanges['02:00-04:00 PM']++;
-        elseif($h>=16 && $h<18) $hourRanges['04:00-06:00 PM']++;
-        elseif($h>=18 && $h<20) $hourRanges['06:00-08:00 PM']++;
-        elseif($h>=20 && $h<22) $hourRanges['08:00-10:00 PM']++;
-        else $hourRanges['10:00 PM-12:00 AM']++;
+    // FIXED: Only call strtotime if processing_start exists and not null
+    if(!empty($row['processing_start'])){
+        $ts = strtotime($row['processing_start']);
+        if($ts!==false){
+            $h = (int)date('H',$ts);
+            if($h>=8 && $h<10) $hourRanges['08:00-10:00 AM']++;
+            elseif($h>=10 && $h<12) $hourRanges['10:00-12:00 PM']++;
+            elseif($h>=12 && $h<14) $hourRanges['12:00-02:00 PM']++;
+            elseif($h>=14 && $h<16) $hourRanges['02:00-04:00 PM']++;
+            elseif($h>=16 && $h<18) $hourRanges['04:00-06:00 PM']++;
+            elseif($h>=18 && $h<20) $hourRanges['06:00-08:00 PM']++;
+            elseif($h>=20 && $h<22) $hourRanges['08:00-10:00 PM']++;
+            else $hourRanges['10:00 PM-12:00 AM']++;
+        }
     }
 }
+
 arsort($hourRanges);
 $peakHoursText = "No activity";
 foreach($hourRanges as $range=>$count){
     if($count>0){
-        $peakHoursText=utf8_decode("$range - $count request(s)");
+        // FIXED: use mb_convert_encoding instead of utf8_decode
+        $peakHoursText = mb_convert_encoding("$range - $count request(s)", 'ISO-8859-1', 'UTF-8');
         break;
     }
 }
@@ -107,7 +122,8 @@ $pdf->Cell(0,10,"IV. Issues / Decline Reasons",0,1);
 $pdf->SetFont('Arial','',11);
 if(!empty($issues)){
     foreach($issues as $reason){
-        $pdf->MultiCell(0,8,"- ".utf8_decode($reason));
+        // FIXED: replace utf8_decode
+        $pdf->MultiCell(0,8,"- ".mb_convert_encoding($reason,'ISO-8859-1','UTF-8'));
     }
 }else $pdf->Cell(0,8,"No issues logged.",0,1);
 $pdf->Ln(3);
@@ -115,7 +131,9 @@ $pdf->Ln(3);
 $pdf->SetFont('Arial','B',12);
 $pdf->Cell(0,10,"V. Summary",0,1);
 $pdf->SetFont('Arial','',11);
-$pdf->MultiCell(0,8,"This report summarizes all requests filed and processed by the Registrar's Office on ".date("F d, Y",strtotime($reportDate)).". It includes breakdowns of request statuses, document types, activity times, and issues encountered.");
+
+$summaryText = "This report summarizes all requests filed and processed by the Registrar's Office on $dateText. It includes breakdowns of request statuses, document types, activity times, and issues encountered.";
+$pdf->MultiCell(0,8,mb_convert_encoding($summaryText,'ISO-8859-1','UTF-8'));
 
 // ====== DETAILED TABLE ======
 $pdf->AddPage();
@@ -125,7 +143,7 @@ $pdf->Ln(3);
 
 // Table header
 $pdf->SetFont('Arial','B',10);
-$colWidths = [10, 40, 25, 25, 60, 30]; // stable widths
+$colWidths = [10, 40, 25, 25, 60, 30];
 $headers = ['#','Name','Student No.','Section','Documents','Status'];
 foreach($headers as $i=>$header){
     $pdf->Cell($colWidths[$i],10,$header,1,0,'C');
@@ -137,11 +155,11 @@ $lineHeight = 5;
 $i=1;
 
 foreach($rows as $row){
-    $name = $row['first_name']." ".$row['last_name'];
-    $studentNo = $row['student_number'];
+    $name = trim(($row['first_name'] ?? '')." ".($row['last_name'] ?? ''));
+    $studentNo = $row['student_number'] ?? '-';
     $section = $row['section'] ?? '-';
-    $documents = $row['documents'];
-    $status = $row['status'];
+    $documents = $row['documents'] ?? '-';
+    $status = $row['status'] ?? '-';
 
     // calculate row height
     $lines = [
@@ -184,6 +202,7 @@ foreach($rows as $row){
     $pdf->SetXY($x,$y+$rowHeight);
 }
 
+// Output PDF
 $pdf->Output("I","Registrar_Report_".$reportDate.".pdf");
 
 // Helper
