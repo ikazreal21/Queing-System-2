@@ -53,7 +53,7 @@ try {
     $pdo->beginTransaction(); // Start transaction for concurrency safety
     switch ($action) {
 
-      // ================= APPROVE =================
+   // ================= APPROVE =================
 case 'approve':
 
     // 1. Calculate max processing days based on requested documents
@@ -71,26 +71,22 @@ case 'approve':
     $processing_start = date('Y-m-d H:i:s');
     $processing_end   = date('Y-m-d H:i:s', strtotime("+$maxDays days"));
 
-    // 2. Safely generate a unique queue number
-    do {
-        $stmtQueue = $pdo->prepare("
-            SELECT MAX(queueing_num) AS max_queue
-            FROM requests
-            WHERE department = :dept AND status IN ('Processing','In Queue Now')
-        ");
-        $stmtQueue->execute([':dept' => $current['department']]);
-        $maxQueue = $stmtQueue->fetchColumn();
-        $queueing_num = $maxQueue ? $maxQueue + 1 : 1;
+    // 2. Safely generate a unique queue number (strict, starts from 1)
+    $queueing_num = 1;
 
-        $stmtCheck = $pdo->prepare("
-            SELECT COUNT(*) 
-            FROM requests 
-            WHERE department = :dept AND queueing_num = :qnum 
-                  AND status IN ('Processing','In Queue Now')
-        ");
-        $stmtCheck->execute([':dept' => $current['department'], ':qnum' => $queueing_num]);
-        $exists = $stmtCheck->fetchColumn();
-    } while ($exists);
+    $stmtQueueNums = $pdo->prepare("
+        SELECT queueing_num 
+        FROM requests 
+        WHERE department = :dept AND status IN ('Processing','In Queue Now')
+        ORDER BY queueing_num ASC
+    ");
+    $stmtQueueNums->execute([':dept' => $current['department']]);
+    $existingQueues = $stmtQueueNums->fetchAll(PDO::FETCH_COLUMN);
+
+    // Increment to find the first available queue number
+    while (in_array($queueing_num, $existingQueues)) {
+        $queueing_num++;
+    }
 
     // 3. Update the request
     $stmtUpdate = $pdo->prepare("

@@ -41,10 +41,9 @@ if (isset($_POST['add_document'])) {
 
     if (!empty($doc_name) && $processing_days > 0) {
         $fee = (float) $_POST['fee'];
-        $extra_info = !empty($_POST['extra_info']) ? trim($_POST['extra_info']) : null;
 
-        $stmt = $pdo->prepare("INSERT INTO documents (name, processing_days, fee, extra_info) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$doc_name, $processing_days, $fee, $extra_info]);
+        $stmt = $pdo->prepare("INSERT INTO documents (name, processing_days, fee) VALUES (?, ?, ?)");
+        $stmt->execute([$doc_name, $processing_days, $fee]);
     }
     header("Location: admin_documents.php");
     exit();
@@ -56,10 +55,9 @@ if (isset($_POST['update_document'])) {
     $doc_name = trim($_POST['edit_document_name']);
     $processing_days = (int) $_POST['edit_processing_days'];
     $fee = (float) $_POST['edit_fee'];
-    $extra_info = !empty($_POST['edit_extra_info']) ? trim($_POST['edit_extra_info']) : null;
 
-    $stmt = $pdo->prepare("UPDATE documents SET name=?, processing_days=?, fee=?, extra_info=? WHERE id=?");
-    $stmt->execute([$doc_name, $processing_days, $fee, $extra_info, $doc_id]);
+    $stmt = $pdo->prepare("UPDATE documents SET name=?, processing_days=?, fee=? WHERE id=?");
+    $stmt->execute([$doc_name, $processing_days, $fee, $doc_id]);
 
     header("Location: admin_documents.php");
     exit();
@@ -194,10 +192,6 @@ $documents = $pdo->query("SELECT * FROM documents ORDER BY name ASC")->fetchAll(
                     <input id="fee" name="fee" type="number" placeholder="Fee (₱)" step="0.01" min="0" required>
                 </div>
 
-                <div class="form-group grow">
-                    <input id="extra_info" name="extra_info" type="text" placeholder="Requirements (comma separated, optional)">
-                </div>
-
                 <div class="form-group">
                     <button type="submit" name="add_document" class="btn-primary">Add Document</button>
                 </div>
@@ -207,9 +201,13 @@ $documents = $pdo->query("SELECT * FROM documents ORDER BY name ASC")->fetchAll(
 
     <!-- Documents Table -->
     <section class="panel">
-        <div class="panel-header">
-            <h2>Documents</h2>
-        </div>
+        <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <h2>Documents</h2>
+
+    <input type="text" id="searchInput" placeholder="Search documents..."
+           style="padding:8px 12px; width:250px; border:1px solid #ccc; border-radius:5px;">
+</div>
+
         <div class="table-wrap">
             <table class="doc-table">
                 <thead>
@@ -217,7 +215,6 @@ $documents = $pdo->query("SELECT * FROM documents ORDER BY name ASC")->fetchAll(
                         <th>Name</th>
                         <th>Processing (days)</th>
                         <th>Fee (₱)</th>
-                        <th>Requirements</th>
                         <th class="actions-col">Actions</th>
                     </tr>
                 </thead>
@@ -229,14 +226,12 @@ $documents = $pdo->query("SELECT * FROM documents ORDER BY name ASC")->fetchAll(
                             <td><?= htmlspecialchars($doc['name']); ?></td>
                             <td><?= (int)$doc['processing_days']; ?></td>
                             <td>₱<?= number_format((float)$doc['fee'], 2); ?></td>
-                            <td><?= nl2br(htmlspecialchars($doc['extra_info'])); ?></td>
                             <td class="actions-col">
                                 <button class="btn-ghost edit-btn"
                                     data-id="<?= $doc['id']; ?>"
                                     data-name="<?= htmlspecialchars($doc['name']); ?>"
                                     data-days="<?= $doc['processing_days']; ?>"
                                     data-fee="<?= $doc['fee']; ?>"
-                                    data-info="<?= htmlspecialchars($doc['extra_info']); ?>"
                                 ><i class="bx bx-edit"></i> Edit</button>
 
                                 <a class="btn-danger" href="admin_documents.php?delete_document=<?= (int)$doc['id']; ?>"
@@ -306,8 +301,6 @@ $documents = $pdo->query("SELECT * FROM documents ORDER BY name ASC")->fetchAll(
         <input type="number" id="edit_days" name="edit_processing_days" min="1" required>
         <label>Fee (₱)</label>
         <input type="number" id="edit_fee" name="edit_fee" step="0.01" min="0" required>
-        <label>Requirements</label>
-        <input type="text" id="edit_info" name="edit_extra_info">
         <div class="modal-buttons">
           <button type="button" class="btn-cancel" onclick="closeEditModal()">Cancel</button>
           <button type="submit" name="update_document" class="btn-save">Save Changes</button>
@@ -342,7 +335,21 @@ function closeEditModal(){document.getElementById("editModal").classList.remove(
 document.querySelectorAll(".edit-btn").forEach(btn=>btn.addEventListener("click",()=>openEditModal(
     btn.dataset.id, btn.dataset.name, btn.dataset.days, btn.dataset.fee, btn.dataset.info
 )));
-document.addEventListener("click",function(e){if(e.target===document.getElementById("editModal"))closeEditModal();});
+document.addEventListener("click",function(e){if(e.target===document.getElementById("editModal"))closeEditModal();
+
+});
+
+const searchInput = document.getElementById("searchInput");
+
+searchInput.addEventListener("keyup", function () {
+    const filter = searchInput.value.toLowerCase();
+    const rows = document.querySelectorAll(".doc-table tbody tr");
+
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(filter) ? "" : "none";
+    });
+});
 </script>
 
 </body>

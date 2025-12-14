@@ -105,6 +105,15 @@ $completedCount = $stmt->fetchColumn();
 
 <!-- ================= SIDEBAR ================= -->
 <nav class="sidebar">
+    <div class="notification-wrapper">
+        <button id="notifBtn" class="notif-btn">
+            🔔 <span id="notifCount" class="notif-count">0</span>
+        </button>
+        <div id="notifDropdown" class="notif-dropdown">
+            <ul id="notifList"></ul>
+        </div>
+    </div>
+
     <header>
         <div class="image-text">
             <span class="image"><img src="assets/fatimalogo.jpg" alt="logo"></span>
@@ -132,12 +141,39 @@ $completedCount = $stmt->fetchColumn();
 
 <!-- ================= SUMMARY BOXES ================= -->
 <section class="landing-page">
-    <div class="service-box summary"><p>Total Requests Today</p><h3><?= $totalToday; ?></h3></div>
-    <div class="service-box summary"><p>Pending Requests</p><h3><?= $pendingCount; ?></h3></div>
-    <div class="service-box summary"><p>Processing Requests</p><h3><?= $processingCount; ?></h3></div>
-    <div class="service-box summary"><p>Declined Requests</p><h3><?= $declinedCount; ?></h3></div>
-    <div class="service-box summary"><p>Completed Transactions</p><h3><?= $completedCount; ?></h3></div>
+    <a href="archive.php" class="service-box summary">
+        <p>Total Requests Today</p>
+        <h3><?= $totalToday; ?></h3>
+    </a>
+    <a href="staff_requests.php?filter=pending" class="service-box summary">
+        <p>Pending Requests</p>
+        <h3><?= $pendingCount; ?></h3>
+    </a>
+    <a href="staff_requests.php?filter=processing" class="service-box summary" onclick="window.location.href='staff_requests.php?filter=processing#processing-box'">
+        <p>Processing Requests</p>
+        <h3><?= $processingCount; ?></h3>
+    </a>
+    <a href="staff_requests.php?filter=declined" class="service-box summary" onclick="window.location.href='staff_requests.php?filter=declined#declined-box'">
+        <p>Declined Requests</p>
+        <h3><?= $declinedCount; ?></h3>
+    </a>
+    <a href="staff_requests.php?filter=completed" class="service-box summary">
+        <p>Completed Transactions</p>
+        <h3><?= $completedCount; ?></h3>
+    </a>
 </section>
+
+<style>
+.service-box.summary {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit; /* keep original colors */
+}
+.service-box.summary:hover {
+    background-color: #f0f0f0; /* optional hover effect */
+}
+</style>
+
 
 <!-- ================= TABLES ================= -->
 <section class="section" id="queue-monitoring">
@@ -224,43 +260,6 @@ $completedCount = $stmt->fetchColumn();
             </div>
         </div>
 
-        <!-- ===== ARCHIVE REQUESTS ===== -->
-        <div class="table-box archive-box">
-            <h3>
-                Archived Requests
-                <input type="date" id="archiveDatePicker">
-            </h3>
-
-            <div style="margin: 10px 0; text-align: right;">
-                <form id="generateReportForm" action="generate_report.php" method="POST" target="_blank">
-                    <input type="hidden" id="reportDateHidden" name="reportDate">
-                    <button type="submit">Generate PDF Report</button>
-                </form>
-            </div>
-
-            <div class="table-scroll" id="archiveTableContainer">
-                <table class="approve-table" id="archiveTable">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Name</th>
-                            <th>Student No.</th>
-                            <th>Section</th>
-                            <th>Last SY</th>
-                            <th>Last Semester</th>
-                            <th>Documents</th>
-                            <th>Notes</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- AJAX will populate archive rows -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-    </div>
 </section>
 
 <!-- ================= MODAL ================= -->
@@ -280,6 +279,8 @@ $completedCount = $stmt->fetchColumn();
         <div id="attachmentContainer"></div>
     </div>
 </div>
+
+<div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
 
 <script src="staff_dashboard.js"></script>
 <script>

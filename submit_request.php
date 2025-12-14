@@ -17,6 +17,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $documents        = isset($_POST['documents']) ? implode(", ", $_POST['documents']) : '';
         $notes            = $_POST['notes'] ?? '';
 
+        $checkStmt = $pdo->prepare("
+            SELECT status, attachment 
+            FROM requests
+            WHERE student_number = ?
+            AND DATE(created_at) = CURDATE()
+            ORDER BY created_at DESC
+            LIMIT 1
+        ");
+        
+        $checkStmt->execute([$student_number]);
+
+        $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existing) {
+            // 🚫 BLOCK if NOT auto-declined
+            if ($existing['status'] !== 'Declined' || !empty($existing['attachment'])) {
+                $flash["msg"] = "You can only submit one valid request per day.";
+                $flash["type"] = "error";
+                $_SESSION["flash"] = $flash;
+                header("Location: user_dashboard.php");
+                exit();
+            }
+            // ✅ ALLOW if Declined AND no attachment (auto-declined)
+        }
+
         // Handle multiple file uploads using Cloudinary
         $attachments = [];
         $status = "Declined"; // default if no attachment

@@ -587,7 +587,7 @@ if ($request && !empty($request['queueing_num'])) {
                                                     <!-- Blank for pending -->
 
                                                 <?php elseif ($req['status'] === 'Declined'): ?>
-                                                    <?php echo htmlspecialchars($req['decline_reason'] ?? 'No reason provided'); ?>
+                                                    <?php echo htmlspecialchars($req['decline_reason'] ?? 'No attachment/s provided'); ?>
 
                                                 <?php elseif ($req['status'] === 'Processing'): ?>
                                                     <?php if (!empty($req['processing_time'])): ?>
@@ -1008,6 +1008,72 @@ if ($request && !empty($request['queueing_num'])) {
             }
         });
     </script>
+    <style>
+#flashModalOverlay {
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.6);
+    backdrop-filter: blur(2px);
+    justify-content:center;
+    align-items:center;
+    z-index:999999;
+}
+#flashModal {
+    background:#fff;
+    padding:25px;
+    width:350px;
+    border-radius:10px;
+    text-align:center;
+    box-shadow:0 0 20px rgba(0,0,0,0.2);
+}
+#flashModal h2 {
+    margin-bottom:10px;
+}
+#flashModal button {
+    margin-top:20px;
+    padding:10px 20px;
+    border:none;
+    background:#008c45;
+    color:#fff;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+</style>
+
+<div id="flashModalOverlay">
+    <div id="flashModal">
+        <h2 id="flashTitle">Notification</h2>
+        <p id="flashMessage"></p>
+        <button onclick="closeFlash()">OK</button>
+    </div>
+</div>
+
+<script>
+function showFlash(type, msg) {
+    document.getElementById("flashTitle").innerText =
+        type === "error" ? "Error" :
+        type === "success" ? "Success" :
+        "Notice";
+
+    document.getElementById("flashMessage").innerText = msg;
+    document.getElementById("flashModalOverlay").style.display = "flex";
+}
+
+function closeFlash() {
+    document.getElementById("flashModalOverlay").style.display = "none";
+    window.location.href = "user_dashboard.php";
+}
+</script>
+
+<?php if (!empty($_SESSION["flash"])): ?>
+<script>
+    showFlash("<?= $_SESSION['flash']['type'] ?>", "<?= $_SESSION['flash']['msg'] ?>");
+</script>
+<?php unset($_SESSION["flash"]); endif; ?>
+
 
 </body>
 

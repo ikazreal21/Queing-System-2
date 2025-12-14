@@ -122,4 +122,96 @@ document.getElementById("generateReportForm").addEventListener("submit", functio
     }
     document.getElementById("reportDateHidden").value = selectedDate;
 });
+document.addEventListener("DOMContentLoaded", function () {
+    const notifBtn = document.getElementById("notifBtn");
+    const notifDropdown = document.getElementById("notifDropdown");
+    const notifCount = document.getElementById("notifCount");
+    const notifList = document.getElementById("notifList");
+    const audio = new Audio("assets/notif.mp3");
 
+    const today = new Date().toISOString().slice(0, 10);
+
+    // === DAILY RESET ===
+    const lastDay = localStorage.getItem("notifLastDay");
+    if (lastDay !== today) {
+        localStorage.setItem("notifLastDay", today);
+        localStorage.removeItem("seenNotifications");
+        notifCount.textContent = "0";
+        notifList.innerHTML = "";
+    }
+
+    let seenIds = new Set(JSON.parse(localStorage.getItem("seenNotifications") || "[]"));
+    let fetchedData = [];
+    let soundInterval = null;
+
+    function fetchNotifications() {
+        fetch("notifications.php")
+            .then(r => r.json())
+            .then(data => {
+                if (!Array.isArray(data)) return;
+
+                // 🔥 TODAY ONLY
+                fetchedData = data.filter(
+                    req => req.created_at && req.created_at.slice(0, 10) === today
+                );
+
+                // 🔥 COUNT = UNSEEN TODAY ONLY
+                const unseenToday = fetchedData.filter(
+                    req => !seenIds.has(req.id)
+                );
+
+                notifCount.textContent = unseenToday.length;
+
+                if (unseenToday.length > 0) {
+                    notifBtn.style.color = "#008c45";
+
+                    if (notifDropdown.style.display !== "block" && !soundInterval) {
+                        audio.currentTime = 0;
+                        audio.play().catch(() => {});
+                        soundInterval = setInterval(() => {
+                            audio.currentTime = 0;
+                            audio.play().catch(() => {});
+                        }, 5000);
+                    }
+                }
+            })
+            .catch(() => {});
+    }
+
+    notifBtn.addEventListener("click", () => {
+        const isOpen = notifDropdown.style.display === "block";
+        notifDropdown.style.display = isOpen ? "none" : "block";
+
+        if (!isOpen) {
+            if (soundInterval) {
+                clearInterval(soundInterval);
+                soundInterval = null;
+            }
+
+            notifList.innerHTML = "";
+
+            fetchedData.forEach(req => {
+                const li = document.createElement("li");
+                li.dataset.id = req.id;
+
+                if (!seenIds.has(req.id)) li.classList.add("new-notif");
+
+                li.innerHTML = `
+                    <div class="notif-user">${req.first_name} ${req.last_name}</div>
+                    <div class="notif-type-dept">
+                        ${req.walk_in == 1 ? "Walk-In" : "Online"} - Dept: ${req.department}
+                    </div>
+                `;
+
+                notifList.prepend(li);
+                seenIds.add(req.id);
+            });
+
+            localStorage.setItem("seenNotifications", JSON.stringify([...seenIds]));
+            notifCount.textContent = "0";
+        }
+    });
+
+    setInterval(fetchNotifications, 2000);
+    fetchNotifications();
+});

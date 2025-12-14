@@ -12,31 +12,38 @@ $request_id = intval($_POST['request_id']);
 
 try {
     // Fetch the request
-    $stmt = $pdo->prepare("SELECT status FROM requests WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT status, claim_date FROM requests WHERE id = ?");
     $stmt->execute([$request_id]);
     $request = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$request) {
         throw new Exception("Request not found");
     }
+
+    // Only allow claiming if status is "To Be Claimed"
     if ($request['status'] !== 'To Be Claimed') {
         throw new Exception("Cannot claim: status is not 'To Be Claimed'");
     }
 
-    // Update request to "In Queue Now" and set claim_date
-$stmtUpdate = $pdo->prepare("
-    UPDATE requests
-    SET status = 'In Queue Now',
-        claim_date = NOW(),
-        updated_at = NOW()
-    WHERE id = :id
-");
-$stmtUpdate->execute([':id' => $request_id]);
+    // Block claiming if it became 'To Be Claimed' today
+    if (!empty($request['claim_date']) && date('Y-m-d', strtotime($request['claim_date'])) == date('Y-m-d')) {
+        throw new Exception("Cannot claim yet: wait until the next day");
+    }
 
+    // Move request to "In Queue Now" and reset call attempts
+    $stmtUpdate = $pdo->prepare("
+        UPDATE requests
+        SET status = 'In Queue Now',
+            claim_date = NOW(),
+            call_attempts = 0,
+            updated_at = NOW()
+        WHERE id = :id
+    ");
+    $stmtUpdate->execute([':id' => $request_id]);
 
     $_SESSION['flash_message'] = [
         'type' => 'success',
-        'text' => "Your request has been moved to the queue."
+        'text' => "Your request has been moved to the queue and is now claimable."
     ];
 
 } catch (Exception $e) {
