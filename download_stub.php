@@ -3,30 +3,34 @@ session_start();
 include('db.php');
 date_default_timezone_set("Asia/Manila");
 
-// Ensure student is logged in
-if (!isset($_SESSION['student_number'])) {
-    die("Access denied. Please log in.");
+$queue = $_GET['queue'] ?? null;
+
+if (!$queue) {
+    die("Missing required data for queue stub.");
 }
 
-$id = $_GET['id'] ?? null;
-
-if (!$id) {
-    die("Missing required request ID.");
-}
-
-// Fetch only the logged-in student's request by ID and exclude walk-ins
+/*
+  FIX:
+  - Match queueing_num
+  - Match logged-in student
+  - Exclude walk-ins
+*/
 $stmt = $pdo->prepare("
     SELECT * 
     FROM requests 
-    WHERE id = ? 
-      AND student_number = ? 
+    WHERE queueing_num = ?
+      AND student_number = ?
       AND walk_in = 0
+    LIMIT 1
 ");
-$stmt->execute([$id, $_SESSION['student_number']]);
+$stmt->execute([
+    $queue,
+    $_SESSION['student_number']
+]);
 $request = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$request) {
-    die("Request not found or access denied.");
+    die("Queue info not found.");
 }
 
 require __DIR__ . '/vendor/autoload.php';
@@ -41,7 +45,7 @@ class PDF extends FPDF {
     }
 }
 
-// Custom page size for ticket style
+// Custom page size
 $pdf = new PDF('P','mm',[80,200]);
 $pdf->AddPage();
 
@@ -64,27 +68,28 @@ $pdf->Ln(2);
 // Queue Number
 $pdf->SetFont('Arial','B',24);
 $pdf->SetTextColor(0, 140, 69); 
-$pdf->Cell(0,15,htmlspecialchars($request['queueing_num']),0,1,'C');
+$pdf->Cell(0,15,$request['queueing_num'],0,1,'C');
 $pdf->SetTextColor(0,0,0); 
 $pdf->Ln(2);
 
-// Details
+// Name
 $pdf->SetFont('Arial','B',10);
 $pdf->Cell(35,6,'Name:',0,0);
 $pdf->SetFont('Arial','',10);
-$pdf->Cell(0,6,htmlspecialchars($request['first_name'].' '.$request['last_name']),0,1);
+$pdf->Cell(0,6,$request['first_name'].' '.$request['last_name'],0,1);
 
+// Position
 $pdf->SetFont('Arial','B',10);
 $pdf->Cell(35,6,'Position:',0,0);
 $pdf->SetFont('Arial','',10);
 
-// Real-time position calculation (exclude walk-ins)
+// Position calculation (exclude walk-ins)
 $stmt2 = $pdo->prepare("
     SELECT COUNT(*) 
     FROM requests 
     WHERE department = :dept
       AND queueing_num < :qnum
-      AND status IN ('In Queue Now','Processing')
+      AND status IN ('In Queue Now','Processing','Serving')
       AND walk_in = 0
 ");
 $stmt2->execute([
@@ -95,22 +100,25 @@ $position = (int)$stmt2->fetchColumn() + 1;
 
 $pdf->Cell(0,6,$position,0,1);
 
+// Status
 $pdf->SetFont('Arial','B',10);
 $pdf->Cell(35,6,'Status:',0,0);
 $pdf->SetFont('Arial','',10);
-$pdf->Cell(0,6,htmlspecialchars($request['status']),0,1);
+$pdf->Cell(0,6,$request['status'],0,1);
 
+// Document
 $pdf->SetFont('Arial','B',10);
 $pdf->Cell(35,6,'Document:',0,0);
 $pdf->SetFont('Arial','',10);
-$pdf->MultiCell(0,6,htmlspecialchars($request['documents']));
+$pdf->MultiCell(0,6,$request['documents']);
 
+// Date
 $pdf->SetFont('Arial','B',10);
 $pdf->Cell(35,6,'Date:',0,0);
 $pdf->SetFont('Arial','',10);
 $pdf->Cell(0,6,date('F d, Y', strtotime($request['created_at'])),0,1);
 
-// Dash line
+// Divider
 $pdf->Ln(5);
 $y = $pdf->GetY();
 $pdf->SetDash(1,2); 
@@ -118,9 +126,9 @@ $pdf->Line(5,$y,75,$y);
 $pdf->SetDash(); 
 $pdf->Ln(5);
 
+// Footer
 $pdf->SetFont('Arial','I',9);
 $pdf->MultiCell(0,5,'Please wait for your turn at the counter. Thank you for your patience.',0,'C');
 
-// Output PDF
-$pdf->Output('I', 'QueueStub_'.$request['queueing_num'].'.pdf');
+$pdf->Output('I', 'QueueStub_'.$queue.'.pdf');
 ?>
