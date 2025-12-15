@@ -3,10 +3,6 @@ session_start();
 include('db.php');
 date_default_timezone_set("Asia/Manila");
 
-// Ensure the student is logged in
-if (!isset($_SESSION['student_number'])) {
-    die("Access denied. Please log in.");
-}
 
 $queue = $_GET['queue'] ?? null;
 
@@ -14,19 +10,12 @@ if (!$queue) {
     die("Missing required data for queue stub.");
 }
 
-// Fetch only the logged-in student's request and exclude walk-ins
-$stmt = $pdo->prepare("
-    SELECT * 
-    FROM requests 
-    WHERE queueing_num = ? 
-      AND student_number = ? 
-      AND walk_in = 0
-");
-$stmt->execute([$queue, $_SESSION['student_number']]);
+$stmt = $pdo->prepare("SELECT * FROM requests WHERE queueing_num = ?");
+$stmt->execute([$queue]);
 $request = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$request) {
-    die("Queue info not found or access denied.");
+    die("Queue info not found.");
 }
 
 require __DIR__ . '/vendor/autoload.php';
@@ -45,30 +34,32 @@ class PDF extends FPDF {
 $pdf = new PDF('P','mm',[80,200]);
 $pdf->AddPage();
 
-// Header
+//header
 $pdf->Image(__DIR__ . '/fatimalogo.jpg', 30, 6, 20); 
-$pdf->SetY(30);
 
-// University & Office
+$pdf->SetY(30); 
+
+//University & Office
 $pdf->SetFont('Arial', 'B', 12);
 $pdf->Cell(0, 6, "OUR LADY OF FATIMA UNIVERSITY", 0, 1, 'C');
 $pdf->SetFont('Arial', '', 10);
 $pdf->Cell(0, 5, "Antipolo City - Office of the Registrar", 0, 1, 'C');
 $pdf->Ln(4);
 
-// Title
+//Title
 $pdf->SetFont('Arial', 'B', 14);
 $pdf->Cell(0, 8, "QUEUE STUB / TICKET", 0, 1, 'C');
 $pdf->Ln(2);
 
-// Queue Number
+//Queue Num
 $pdf->SetFont('Arial','B',24);
 $pdf->SetTextColor(0, 140, 69); 
 $pdf->Cell(0,15,htmlspecialchars($request['queueing_num']),0,1,'C');
 $pdf->SetTextColor(0,0,0); 
 $pdf->Ln(2);
 
-// Details
+
+//details
 $pdf->SetFont('Arial','B',10);
 $pdf->Cell(35,6,'Name:',0,0);
 $pdf->SetFont('Arial','',10);
@@ -78,22 +69,24 @@ $pdf->SetFont('Arial','B',10);
 $pdf->Cell(35,6,'Position:',0,0);
 $pdf->SetFont('Arial','',10);
 
-// Real-time position calculation (exclude walk-ins)
+//Real-time position calculation
 $stmt2 = $pdo->prepare("
     SELECT COUNT(*) 
     FROM requests 
     WHERE department = :dept
       AND queueing_num < :qnum
       AND status IN ('In Queue Now','Processing')
-      AND walk_in = 0
 ");
 $stmt2->execute([
     ':dept' => $request['department'],
     ':qnum' => $request['queueing_num']
 ]);
-$position = (int)$stmt2->fetchColumn() + 1;
+
+$ahead = (int)$stmt2->fetchColumn();
+$position = $ahead + 1;
 
 $pdf->Cell(0,6,$position,0,1);
+
 
 $pdf->SetFont('Arial','B',10);
 $pdf->Cell(35,6,'Status:',0,0);
@@ -110,7 +103,7 @@ $pdf->Cell(35,6,'Date:',0,0);
 $pdf->SetFont('Arial','',10);
 $pdf->Cell(0,6,date('F d, Y', strtotime($request['created_at'])),0,1);
 
-// Dash line
+//dash line
 $pdf->Ln(5);
 $y = $pdf->GetY();
 $pdf->SetDash(1,2); 
@@ -121,6 +114,5 @@ $pdf->Ln(5);
 $pdf->SetFont('Arial','I',9);
 $pdf->MultiCell(0,5,'Please wait for your turn at the counter. Thank you for your patience.',0,'C');
 
-// Output PDF
 $pdf->Output('I', 'QueueStub_'.$queue.'.pdf');
 ?>
